@@ -363,7 +363,7 @@ let orderSearch = '';
 function viewOrders(){
   const counts = {};
   STATUS_FLOW.forEach(s=>counts[s]=orders.filter(o=>o.status===s).length);
-  const filtered = orders.filter(o=>o.status===orderStatusTab && (o.achiever.toLowerCase().includes(orderSearch.toLowerCase()) || o.id.includes(orderSearch)));
+  const filtered = orders.filter(o=>o.status===orderStatusTab && (o.achiever.toLowerCase().includes(orderSearch.toLowerCase()) || String(o.id).includes(orderSearch)));
 
   return `
   <div class="panel">
@@ -390,7 +390,7 @@ function cap(s){ return s.charAt(0).toUpperCase()+s.slice(1); }
 
 /* ---------------- ORDER DETAIL / EDIT MODAL (with design proofs) ---------------- */
 function openOrder(id){
-  const o = orders.find(x=>x.id===id);
+  const o = orders.find(x=>String(x.id)===String(id));
   document.getElementById('orderModalContent').innerHTML = renderOrderModal(o);
   document.getElementById('orderModalBg').classList.add('open');
 }
@@ -411,7 +411,7 @@ function handleUpload(e, orderId, field){
   if(!file) return;
   const reader = new FileReader();
   reader.onload = function(ev){
-    const o = orders.find(x=>x.id===orderId);
+    const o = orders.find(x=>String(x.id)===String(orderId));
     o[field] = ev.target.result;
     openOrder(orderId);
     showToast('Design proof uploaded.');
@@ -491,7 +491,7 @@ function renderOrderModal(o){
 }
 
 async function saveOrder(id){
-  const o = orders.find(x=>x.id===id);
+  const o = orders.find(x=>String(x.id)===String(id));
   const before = {...o};
   const changes = [];
   const newVals = {
@@ -582,7 +582,7 @@ function scrollChatToBottom(){
   if(el) el.scrollTop = el.scrollHeight;
 }
 function renderChatModal(orderId){
-  const o = orders.find(x=>x.id===orderId);
+  const o = orders.find(x=>String(x.id)===String(orderId));
   return `
   <div class="modal-head">
     <div><b style="color:var(--gold);font-family:'Playfair Display',serif;">Chat — Order ${o.id}</b><div class="muted" style="font-size:12px;">${o.achiever}</div></div>
@@ -612,7 +612,7 @@ function renderChatModal(orderId){
 function handleChatFileAttach(e, orderId){
   const file = e.target.files[0];
   if(!file) return;
-  const o = orders.find(x=>x.id===orderId);
+  const o = orders.find(x=>String(x.id)===String(orderId));
   const now = new Date();
   const t = now.toLocaleString('en-US',{weekday:'short',month:'short',day:'2-digit',year:'numeric',hour:'numeric',minute:'2-digit'});
   o.chat = o.chat || [];
@@ -636,7 +636,7 @@ async function sendChatMessage(orderId){
   const input = document.getElementById('chat_input');
   const text = input.value.trim();
   if(!text) return;
-  const o = orders.find(x=>x.id===orderId);
+  const o = orders.find(x=>String(x.id)===String(orderId));
   const now = new Date();
   const t = now.toLocaleString('en-US',{weekday:'short',month:'short',day:'2-digit',year:'numeric',hour:'numeric',minute:'2-digit'});
   o.chat = o.chat || [];
