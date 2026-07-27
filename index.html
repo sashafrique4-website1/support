@@ -149,11 +149,15 @@ document.addEventListener('DOMContentLoaded', () => {
     <div class="topbar">
       <div class="greeting" id="greeting"></div>
       <div style="display:flex;align-items:center;gap:14px;">
-        <a href="https://orders.sashafrique.com/" target="_blank" rel="noopener" style="background:var(--gold);color:#111;border:none;border-radius:8px;padding:9px 16px;font-size:12.5px;font-weight:700;text-decoration:none;display:inline-flex;align-items:center;gap:6px;">+ New Order</a>
-        <a href="https://generator.sashafrique.com/" target="_blank" rel="noopener" style="background:var(--panel);color:var(--text);border:1px solid var(--border);border-radius:8px;padding:9px 16px;font-size:12.5px;font-weight:700;text-decoration:none;display:inline-flex;align-items:center;gap:6px;">🧾 Invoice / Receipt</a>
+        <a href="https://order.sashafrique.com/" target="_blank" rel="noopener" style="background:var(--gold);color:#111;border:none;border-radius:8px;padding:9px 16px;font-size:12.5px;font-weight:700;text-decoration:none;display:inline-flex;align-items:center;gap:6px;">+ New Order</a>
+        <a href="https://generate.sashafrique.com/" target="_blank" rel="noopener" style="background:var(--green);color:#fff;border:none;border-radius:8px;padding:9px 16px;font-size:12.5px;font-weight:700;text-decoration:none;display:inline-flex;align-items:center;gap:6px;">🧾 Invoice / Receipt</a>
         <div class="clockwrap" id="clockwrap">
           <span class="status" id="clockStatus">Not clocked in</span>
           <div class="toggle" id="clockToggle" onclick="toggleClock()"><div class="knob"></div></div>
+        </div>
+        <div style="position:relative;">
+          <button id="breakBtn" onclick="toggleBreakPanel()" style="background:var(--panel);border:1px solid var(--border);border-radius:8px;padding:0 12px;height:38px;color:var(--text);font-size:12px;font-weight:600;cursor:pointer;">🍵 <span id="breakChipLabel">Breaks: 0/60</span></button>
+          <div id="breakPanel" style="display:none;position:absolute;right:0;top:46px;width:280px;background:var(--panel);border:1px solid var(--border);border-radius:10px;box-shadow:0 8px 24px rgba(0,0,0,.5);z-index:60;padding:12px;"></div>
         </div>
         <div style="position:relative;">
           <button id="bellBtn" onclick="toggleBellPanel()" style="background:var(--panel);border:1px solid var(--border);border-radius:50%;width:38px;height:38px;color:var(--text);font-size:16px;cursor:pointer;position:relative;">🔔
@@ -300,13 +304,142 @@ function setGreeting(){
   document.getElementById('greeting').innerHTML = `${g}, Esther <div class="sub">Here's what's happening with your achievers today</div>`;
 }
 
-/* ---------------- CLOCK IN/OUT ---------------- */
-function toggleClock(){
-  clockedIn = !clockedIn;
+/* ---------------- CLOCK IN/OUT + STRUCTURED BREAKS ---------------- */
+const BREAK_ORDER = ['morning', 'lunch', 'afternoon'];
+const BREAK_WINDOWS = { morning: '10:30', lunch: '12:30', afternoon: '15:30' };
+const BREAK_ALLOWED = { morning: 15, lunch: 30, afternoon: 15 };
+const BREAK_LABELS = { morning: 'Morning Break', lunch: 'Lunch Break', afternoon: 'Afternoon Break' };
+
+let attendanceState = null;
+let remindedWindow = {};
+let remindedOverrun = {};
+
+async function postAttendance_(action, extra){
+  if(!ORDERS_ENDPOINT) return null;
+  try{
+    const res = await fetch(ORDERS_ENDPOINT, {
+      method:'POST',
+      headers:{'Content-Type':'text/plain;charset=utf-8'},
+      body: JSON.stringify(Object.assign({ action, staff: AGENT_NAME }, extra || {}))
+    });
+    return await res.json();
+  }catch(err){
+    console.warn('Could not reach attendance backend:', err);
+    return null;
+  }
+}
+
+async function loadAttendance(){
+  if(!ORDERS_ENDPOINT) return;
+  try{
+    const res = await fetch(`${ORDERS_ENDPOINT}?action=getToday&staff=${encodeURIComponent(AGENT_NAME)}`);
+    const data = await res.json();
+    if(data.ok) attendanceState = data.attendance;
+  }catch(err){
+    console.warn('Could not load attendance:', err);
+  }
+  renderClockUI();
+}
+
+function renderClockUI(){
+  const a = attendanceState;
+  clockedIn = !!(a && a.clockIn && !a.clockOut);
   document.getElementById('clockToggle').classList.toggle('on', clockedIn);
   document.getElementById('clockStatus').textContent = clockedIn ? 'Clocked in' : 'Not clocked in';
   document.getElementById('clockwrap').classList.toggle('in', clockedIn);
-  showToast(clockedIn ? 'Clocked in for today.' : 'Clocked out.');
+  renderBreakChip();
+}
+
+async function toggleClock(){
+  const res = await postAttendance_(clockedIn ? 'clockOut' : 'clockIn');
+  if(res && res.ok) attendanceState = res.attendance;
+  showToast(clockedIn ? 'Clocked out.' : 'Clocked in for today.');
+  renderClockUI();
+}
+
+function renderBreakChip(){
+  const a = attendanceState;
+  const used = a ? a.totalBreakMinutesUsed : 0;
+  const allowed = a ? a.totalBreakMinutesAllowed : 60;
+  const chip = document.getElementById('breakChipLabel');
+  if(chip) chip.textContent = `Breaks: ${used}/${allowed}`;
+}
+
+function toggleBreakPanel(){
+  const panel = document.getElementById('breakPanel');
+  const show = panel.style.display === 'none';
+  panel.style.display = show ? 'block' : 'none';
+  if(show) renderBreakPanel();
+}
+
+function renderBreakPanel(){
+  const a = attendanceState;
+  const panel = document.getElementById('breakPanel');
+  if(!a || !a.clockIn){
+    panel.innerHTML = `<div class="muted" style="font-size:12px;">Clock in to see today's breaks.</div>`;
+    return;
+  }
+  panel.innerHTML = `
+    <div style="font-size:12.5px;font-weight:700;color:var(--gold);margin-bottom:10px;">Today's Breaks</div>
+    ${BREAK_ORDER.map(key => {
+      const b = a.breaks[key];
+      let statusHtml, actionHtml;
+      if(b.start && b.end){
+        statusHtml = `<span style="color:var(--green);">Done — ${b.minutesUsed} min</span>`;
+        actionHtml = '';
+      } else if(b.start && !b.end){
+        statusHtml = `<span style="color:var(--gold);">In progress</span>`;
+        actionHtml = `<button class="btn ghost" style="padding:4px 10px;font-size:11px;" onclick="endBreak('${key}')">End</button>`;
+      } else {
+        statusHtml = `<span class="muted">Scheduled ${b.windowStart}</span>`;
+        actionHtml = `<button class="btn ghost" style="padding:4px 10px;font-size:11px;" onclick="startBreak('${key}')">Start</button>`;
+      }
+      return `<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid #201e1a;font-size:12px;">
+        <div><div style="font-weight:600;">${b.label} <span class="muted">(${b.allowedMinutes}m)</span></div><div style="margin-top:2px;">${statusHtml}</div></div>
+        ${actionHtml}
+      </div>`;
+    }).join('')}
+    <div class="muted" style="font-size:11px;margin-top:8px;">${a.totalBreakMinutesUsed} of ${a.totalBreakMinutesAllowed} minutes used today</div>
+  `;
+}
+
+async function startBreak(key){
+  const res = await postAttendance_('startBreak', { breakKey: key });
+  if(res && res.ok) attendanceState = res.attendance;
+  renderBreakChip(); renderBreakPanel();
+  showToast(`${BREAK_LABELS[key]} started.`);
+}
+
+async function endBreak(key){
+  const res = await postAttendance_('endBreak', { breakKey: key });
+  if(res && res.ok) attendanceState = res.attendance;
+  renderBreakChip(); renderBreakPanel();
+  showToast(`${BREAK_LABELS[key]} ended.`);
+}
+
+// Reminds her when a break window opens, and alerts when a running break's time is up.
+function checkBreakAlerts(){
+  if(!attendanceState || !attendanceState.clockIn || attendanceState.clockOut) return;
+  const now = new Date();
+  const nowMinutes = now.getHours() * 60 + now.getMinutes();
+  BREAK_ORDER.forEach(key => {
+    const b = attendanceState.breaks[key];
+    const [wh, wm] = BREAK_WINDOWS[key].split(':').map(Number);
+    const windowMinutes = wh * 60 + wm;
+
+    if(!b.start && nowMinutes >= windowMinutes && !remindedWindow[key]){
+      remindedWindow[key] = true;
+      showToast(`⏰ Time for your ${b.label} (${BREAK_ALLOWED[key]} min).`);
+    }
+    if(b.start && !b.end && !remindedOverrun[key]){
+      const [sh, sm, ss] = b.start.split(':').map(Number);
+      const startMinutes = sh * 60 + sm + (ss || 0) / 60;
+      if(nowMinutes - startMinutes >= BREAK_ALLOWED[key]){
+        remindedOverrun[key] = true;
+        showToast(`⏰ Your ${b.label} time is up. Please resume work.`);
+      }
+    }
+  });
 }
 
 /* ---------------- MAIN ROUTER ---------------- */
@@ -495,7 +628,7 @@ function renderOrderModal(o){
       <label style="display:flex;align-items:center;gap:8px;font-size:12px;color:var(--muted);margin-bottom:14px;">
         <input type="checkbox" id="f_notifyProduction" checked style="width:auto;"> Notify production of this change
       </label>
-      <button class="btn ghost" style="width:100%;margin-bottom:8px;" onclick="window.open('https://generator.sashafrique.com/', '_blank')">🧾 Open Invoice / Receipt Generator</button>
+      <button class="btn ghost" style="width:100%;margin-bottom:8px;background:var(--green);border-color:var(--green);color:#fff;" onclick="window.open('https://generate.sashafrique.com/', '_blank')">🧾 Open Invoice / Receipt Generator</button>
       <button class="btn" style="width:100%;" onclick="saveOrder('${o.id}')">Save Changes</button>
     </div>
   </div>
@@ -1085,6 +1218,9 @@ renderMain();
 refreshBell();
 loadOrdersFromBackend();
 setInterval(loadOrdersFromBackend, 30000);
+loadAttendance();
+setInterval(loadAttendance, 30000);
+setInterval(checkBreakAlerts, 30000);
 </script>
 </body>
 </html>
