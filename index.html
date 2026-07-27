@@ -301,7 +301,23 @@ function switchTab(t){ activeTab=t; renderNav(); renderMain(); }
 function setGreeting(){
   const h = new Date().getHours();
   const g = h<12?'Good morning':h<17?'Good afternoon':'Good evening';
-  document.getElementById('greeting').innerHTML = `${g}, Esther <div class="sub">Here's what's happening with your achievers today</div>`;
+  document.getElementById('greeting').innerHTML = `${g}, Esther <div class="sub">Here's what's happening with your achievers today</div><div id="syncIndicator" style="font-size:11px;color:var(--muted);margin-top:4px;display:flex;align-items:center;gap:6px;"><span id="syncDot" style="width:7px;height:7px;border-radius:50%;background:var(--muted);display:inline-block;"></span><span id="syncLabel">Connecting to Google Sheets…</span></div>`;
+}
+
+function setSyncStatus(state, timeLabel){
+  const dot = document.getElementById('syncDot');
+  const label = document.getElementById('syncLabel');
+  if(!dot || !label) return;
+  if(state === 'synced'){
+    dot.style.background = 'var(--green)';
+    label.textContent = `Synced with Google Sheets · ${timeLabel || 'just now'}`;
+  } else if(state === 'syncing'){
+    dot.style.background = 'var(--gold)';
+    label.textContent = 'Syncing with Google Sheets…';
+  } else {
+    dot.style.background = 'var(--red)';
+    label.textContent = 'Could not reach Google Sheets — showing last known data';
+  }
 }
 
 /* ---------------- CLOCK IN/OUT + STRUCTURED BREAKS ---------------- */
@@ -1159,16 +1175,21 @@ const ORDERS_ENDPOINT = 'https://script.google.com/macros/s/AKfycbz9ci17J8pw0n_b
 
 async function loadOrdersFromBackend(){
   if(!ORDERS_ENDPOINT) return;
+  setSyncStatus('syncing');
   try{
     const res = await fetch(`${ORDERS_ENDPOINT}?action=getOrders`);
     const data = await res.json();
-    if(data.ok && Array.isArray(data.orders) && data.orders.length){
-      orders = data.orders;
+    if(data.ok && Array.isArray(data.orders)){
+      orders = data.orders; // always reflect the Sheet, even if it's empty — stale demo data would be misleading
       renderMain();
       refreshBell();
+      setSyncStatus('synced', new Date().toLocaleTimeString('en-US', {hour:'numeric', minute:'2-digit'}));
+    } else {
+      setSyncStatus('error');
     }
   }catch(err){
     console.warn('Could not reach orders backend:', err);
+    setSyncStatus('error');
   }
 }
 
