@@ -3,6 +3,13 @@
 <head>
 <meta charset="UTF-8">
 <title>Achiever Service Dashboard — Draft v2</title>
+<link id="faviconLink" rel="icon" type="image/png" href="">
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+  const img = document.querySelector('.sb-brand img');
+  if(img) document.getElementById('faviconLink').href = img.src;
+});
+</script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
@@ -141,15 +148,19 @@
   <div>
     <div class="topbar">
       <div class="greeting" id="greeting"></div>
-      <div class="clockwrap" id="clockwrap">
-        <span class="status" id="clockStatus">Not clocked in</span>
-        <div class="toggle" id="clockToggle" onclick="toggleClock()"><div class="knob"></div></div>
-      </div>
-      <div style="position:relative;">
-        <button id="bellBtn" onclick="toggleBellPanel()" style="background:var(--panel);border:1px solid var(--border);border-radius:50%;width:38px;height:38px;color:var(--text);font-size:16px;cursor:pointer;position:relative;">🔔
-          <span id="bellBadge" style="display:none;position:absolute;top:-4px;right:-4px;background:var(--red);color:#fff;font-size:10px;font-weight:700;border-radius:10px;padding:1px 5px;"></span>
-        </button>
-        <div id="bellPanel" style="display:none;position:absolute;right:0;top:46px;width:300px;background:var(--panel);border:1px solid var(--border);border-radius:10px;box-shadow:0 8px 24px rgba(0,0,0,.5);z-index:60;max-height:340px;overflow-y:auto;"></div>
+      <div style="display:flex;align-items:center;gap:14px;">
+        <a href="https://orders.sashafrique.com/" target="_blank" rel="noopener" style="background:var(--gold);color:#111;border:none;border-radius:8px;padding:9px 16px;font-size:12.5px;font-weight:700;text-decoration:none;display:inline-flex;align-items:center;gap:6px;">+ New Order</a>
+        <a href="https://generator.sashafrique.com/" target="_blank" rel="noopener" style="background:var(--panel);color:var(--text);border:1px solid var(--border);border-radius:8px;padding:9px 16px;font-size:12.5px;font-weight:700;text-decoration:none;display:inline-flex;align-items:center;gap:6px;">🧾 Invoice / Receipt</a>
+        <div class="clockwrap" id="clockwrap">
+          <span class="status" id="clockStatus">Not clocked in</span>
+          <div class="toggle" id="clockToggle" onclick="toggleClock()"><div class="knob"></div></div>
+        </div>
+        <div style="position:relative;">
+          <button id="bellBtn" onclick="toggleBellPanel()" style="background:var(--panel);border:1px solid var(--border);border-radius:50%;width:38px;height:38px;color:var(--text);font-size:16px;cursor:pointer;position:relative;">🔔
+            <span id="bellBadge" style="display:none;position:absolute;top:-4px;right:-4px;background:var(--red);color:#fff;font-size:10px;font-weight:700;border-radius:10px;padding:1px 5px;"></span>
+          </button>
+          <div id="bellPanel" style="display:none;position:absolute;right:0;top:46px;width:300px;background:var(--panel);border:1px solid var(--border);border-radius:10px;box-shadow:0 8px 24px rgba(0,0,0,.5);z-index:60;max-height:340px;overflow-y:auto;"></div>
+        </div>
       </div>
     </div>
     <main id="main"></main>
@@ -363,7 +374,7 @@ let orderSearch = '';
 function viewOrders(){
   const counts = {};
   STATUS_FLOW.forEach(s=>counts[s]=orders.filter(o=>o.status===s).length);
-  const filtered = orders.filter(o=>o.status===orderStatusTab && (o.achiever.toLowerCase().includes(orderSearch.toLowerCase()) || String(o.id).includes(orderSearch)));
+  const filtered = orders.filter(o=>o.status===orderStatusTab && (o.achiever.toLowerCase().includes(orderSearch.toLowerCase()) || o.id.includes(orderSearch)));
 
   return `
   <div class="panel">
@@ -390,7 +401,7 @@ function cap(s){ return s.charAt(0).toUpperCase()+s.slice(1); }
 
 /* ---------------- ORDER DETAIL / EDIT MODAL (with design proofs) ---------------- */
 function openOrder(id){
-  const o = orders.find(x=>String(x.id)===String(id));
+  const o = orders.find(x=>x.id===id);
   document.getElementById('orderModalContent').innerHTML = renderOrderModal(o);
   document.getElementById('orderModalBg').classList.add('open');
 }
@@ -411,7 +422,7 @@ function handleUpload(e, orderId, field){
   if(!file) return;
   const reader = new FileReader();
   reader.onload = function(ev){
-    const o = orders.find(x=>String(x.id)===String(orderId));
+    const o = orders.find(x=>x.id===orderId);
     o[field] = ev.target.result;
     openOrder(orderId);
     showToast('Design proof uploaded.');
@@ -484,6 +495,7 @@ function renderOrderModal(o){
       <label style="display:flex;align-items:center;gap:8px;font-size:12px;color:var(--muted);margin-bottom:14px;">
         <input type="checkbox" id="f_notifyProduction" checked style="width:auto;"> Notify production of this change
       </label>
+      <button class="btn ghost" style="width:100%;margin-bottom:8px;" onclick="window.open('https://generator.sashafrique.com/', '_blank')">🧾 Open Invoice / Receipt Generator</button>
       <button class="btn" style="width:100%;" onclick="saveOrder('${o.id}')">Save Changes</button>
     </div>
   </div>
@@ -491,7 +503,7 @@ function renderOrderModal(o){
 }
 
 async function saveOrder(id){
-  const o = orders.find(x=>String(x.id)===String(id));
+  const o = orders.find(x=>x.id===id);
   const before = {...o};
   const changes = [];
   const newVals = {
@@ -582,7 +594,7 @@ function scrollChatToBottom(){
   if(el) el.scrollTop = el.scrollHeight;
 }
 function renderChatModal(orderId){
-  const o = orders.find(x=>String(x.id)===String(orderId));
+  const o = orders.find(x=>x.id===orderId);
   return `
   <div class="modal-head">
     <div><b style="color:var(--gold);font-family:'Playfair Display',serif;">Chat — Order ${o.id}</b><div class="muted" style="font-size:12px;">${o.achiever}</div></div>
@@ -612,7 +624,7 @@ function renderChatModal(orderId){
 function handleChatFileAttach(e, orderId){
   const file = e.target.files[0];
   if(!file) return;
-  const o = orders.find(x=>String(x.id)===String(orderId));
+  const o = orders.find(x=>x.id===orderId);
   const now = new Date();
   const t = now.toLocaleString('en-US',{weekday:'short',month:'short',day:'2-digit',year:'numeric',hour:'numeric',minute:'2-digit'});
   o.chat = o.chat || [];
@@ -636,7 +648,7 @@ async function sendChatMessage(orderId){
   const input = document.getElementById('chat_input');
   const text = input.value.trim();
   if(!text) return;
-  const o = orders.find(x=>String(x.id)===String(orderId));
+  const o = orders.find(x=>x.id===orderId);
   const now = new Date();
   const t = now.toLocaleString('en-US',{weekday:'short',month:'short',day:'2-digit',year:'numeric',hour:'numeric',minute:'2-digit'});
   o.chat = o.chat || [];
