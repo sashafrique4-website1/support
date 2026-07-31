@@ -34,6 +34,19 @@ document.addEventListener('DOMContentLoaded', () => {
   .sb-nav button .ic{width:16px;text-align:center;opacity:.85;}
   .sb-nav button.active{background:#1c1a17;color:var(--gold);border-left:3px solid var(--gold);font-weight:600;}
   .sb-nav button:hover:not(.active){color:var(--text);}
+  .nav-top-btn{margin-bottom:8px;}
+  .nav-group{margin-bottom:2px;}
+  .nav-group-toggle{
+    width:100%;text-align:left;background:transparent;border:none;color:#8a8a8a;
+    font-size:10.5px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;
+    padding:12px 14px 6px;cursor:pointer;display:flex;align-items:center;justify-content:space-between;
+    font-family:inherit;
+  }
+  .nav-group-toggle:hover{color:var(--text);}
+  .nav-group-toggle .chev{transition:transform .15s ease;font-size:9px;}
+  .nav-group.collapsed .nav-group-toggle .chev{transform:rotate(-90deg);}
+  .nav-group-body{overflow:hidden;max-height:500px;transition:max-height .2s ease;}
+  .nav-group.collapsed .nav-group-body{max-height:0;}
   .sb-foot{padding:14px 20px 0 20px;border-top:1px solid var(--border);margin-top:10px;}
   .sb-foot .who{font-size:12.5px;color:var(--text);font-weight:600;}
   .sb-foot .role{font-size:11px;color:var(--muted);margin-bottom:10px;}
@@ -83,6 +96,20 @@ document.addEventListener('DOMContentLoaded', () => {
   .b-following{background:#1e2f45;color:#7fb3ff;}
   .b-converted{background:#153a1a;color:#5fd97a;}
   .b-lost{background:#3a1e1e;color:#ff8f8f;}
+  .b-cancelled{background:#2a2a2a;color:#999;}
+  .followup-due{color:var(--gold);font-weight:600;}
+  .followup-overdue{color:var(--red);font-weight:700;}
+  .followup-log-item{border-left:2px solid var(--border);padding:6px 0 6px 12px;margin-bottom:8px;}
+  .followup-log-item .fu-meta{font-size:11px;color:var(--muted);margin-bottom:2px;}
+  .kanban-board{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px;}
+  .kanban-col{background:var(--panel2);border:1px solid var(--border);border-radius:10px;padding:12px;display:flex;flex-direction:column;}
+  .kanban-col-head{display:flex;justify-content:space-between;align-items:center;font-size:12.5px;font-weight:700;margin-bottom:10px;}
+  .kanban-col-body{display:flex;flex-direction:column;gap:6px;}
+  .kanban-card{background:var(--panel);border:1px solid var(--border);border-radius:8px;padding:9px 11px;cursor:pointer;transition:border-color .12s ease;}
+  .kanban-card:hover{border-color:var(--gold);}
+  .kanban-card .kc-id{font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--gold);}
+  .kanban-card .kc-name{font-size:12.5px;color:var(--text);margin-top:1px;}
+  .kanban-card .kc-sub{font-size:11px;color:var(--muted);margin-top:2px;}
   .btn{background:var(--gold);color:#111;border:none;padding:9px 16px;border-radius:8px;font-size:12.5px;font-weight:700;cursor:pointer;letter-spacing:.01em;}
   .btn.ghost{background:transparent;border:1px solid var(--gold);color:var(--gold);}
   .btn.small{padding:5px 11px;font-size:11.5px;}
@@ -111,6 +138,19 @@ document.addEventListener('DOMContentLoaded', () => {
   .bar-track{background:#221f1a;border-radius:5px;height:8px;width:100%;overflow:hidden;margin-top:6px;}
   .bar-fill{height:100%;background:var(--gold);}
   .note-banner{background:#101d0d;border:1px solid #204a19;color:#8fdc7a;padding:9px 13px;border-radius:8px;font-size:12px;margin-bottom:14px;}
+  .announce-banner{
+    position:relative;overflow:hidden;
+    background:linear-gradient(120deg,#2b1f04,#1a1408 60%,var(--panel));
+    border:1.5px solid var(--gold);border-radius:12px;
+    padding:16px 18px;margin-bottom:14px;cursor:pointer;
+    box-shadow:0 0 0 1px rgba(250,178,2,.08), 0 4px 18px rgba(250,178,2,.12);
+  }
+  .announce-banner:hover{border-color:#ffc733;}
+  .announce-badge{display:inline-flex;align-items:center;gap:6px;background:var(--gold);color:#1a1408;font-size:10px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;padding:3px 9px;border-radius:999px;margin-bottom:8px;}
+  .announce-badge .pulse-dot{width:6px;height:6px;border-radius:50%;background:#1a1408;animation:announcePulse 1.6s ease-in-out infinite;}
+  @keyframes announcePulse{0%,100%{opacity:1;}50%{opacity:.25;}}
+  .announce-item-latest{border:1.5px solid var(--gold);background:linear-gradient(120deg,#241c08,var(--panel));border-radius:10px;padding:12px 14px;margin-bottom:10px;}
+  .announce-item-latest .announce-badge{margin-bottom:6px;}
   .proofs{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin:8px 0 16px;}
   .proof-box{background:var(--panel2);border:1px dashed var(--border);border-radius:8px;aspect-ratio:1;display:flex;align-items:center;justify-content:center;position:relative;overflow:hidden;cursor:pointer;}
   .proof-box img{width:100%;height:100%;object-fit:cover;}
@@ -192,6 +232,13 @@ function cleanPhoneForSMS(phone){
   if(p.startsWith('email_') || p.length < 9) return null; // not a real phone number
   return p;
 }
+function whatsappLinkFor(o){
+  const clean = cleanPhoneForSMS(o.phone);
+  if(!clean) return null;
+  const digits = clean.replace(/^\+/, ''); // wa.me wants digits only, no plus
+  const msg = `Hello ${o.achiever ? o.achiever.split(' ')[0] : ''}, this is Sash Afrique regarding your order ${o.id}.`;
+  return `https://wa.me/${digits}?text=${encodeURIComponent(msg)}`;
+}
 
 async function sendSMS(phone, message){
   const cleaned = cleanPhoneForSMS(phone);
@@ -222,24 +269,50 @@ async function sendSMS(phone, message){
 
 // Editable automated SMS templates, one per order status.
 // Placeholders: {name}, {order_id}, {delivery_mode}, {tracking_link}
+// Payment details block — edit here once, reused by any template that includes {payment_details}.
+const PAYMENT_DETAILS = 'Pay GHS {total} to 0544136917 - Sash Afrique Ltd (MoMo). Use SA{order_id} as your reference.';
+
 let statusMessageTemplates = {
-  pending:   'Hello {name}, thank you for your order (#{order_id}) with Sash Afrique. We are reviewing it and will be in touch shortly. Track and chat with us here: {tracking_link}',
-  reviewed:  'Hello {name}, we have reviewed your order (#{order_id}). Please make payment to confirm and begin production. Track your order here: {tracking_link}',
-  designing: 'Hello {name}, your order (#{order_id}) has been paid and is now in production. Track progress here: {tracking_link}',
-  paid:      'Hello {name}, we have received payment for your order (#{order_id}). Track it here: {tracking_link}',
-  ready:     'Hello {name}, your Sash Afrique order (#{order_id}) is ready for {delivery_mode}. Details here: {tracking_link}',
-  delivered: 'Hello {name}, your Sash Afrique order (#{order_id}) has been delivered. Thank you for choosing us! {tracking_link}',
+  pending:   'Hello {name}, thank you for your order (#SA{order_id}) with Sash Afrique. We are reviewing it and will be in touch shortly. Track and chat with us here: {tracking_link}',
+  reviewed:  'Hello {name}, we have reviewed your order (#SA{order_id}). Symbol: GHS {price} x {qty}{delivery_line} = GHS {total}. ' + PAYMENT_DETAILS + ' Once paid, track your order here: {tracking_link}',
+  designing: 'Hello {name}, your order (#SA{order_id}) has been paid and is now in production. Track progress here: {tracking_link}',
+  paid:      'Hello {name}, we have received payment for your order (#SA{order_id}). Track it here: {tracking_link}',
+  ready:     'Hello {name}, your Sash Afrique order (#SA{order_id}) is ready for {delivery_mode}. Details here: {tracking_link}',
+  delivered: 'Hello {name}, your Sash Afrique order (#SA{order_id}) has been delivered. Thank you for choosing us! {tracking_link}',
 };
 
+// IMPORTANT: point this at wherever achiever_tracking_page.html is actually hosted.
+// The tracking page must read the id from ?order=... (URLSearchParams).
+// The old /orders/client-tracking/<id>/ path was a WordPress URL that doesn't exist and
+// returned an error page — that's what customers were seeing when they tapped the SMS link.
+const TRACKING_BASE_URL = 'https://www.sashafrique.com/track/?order=';
+
 function trackingLinkFor(o){
-  return `https://www.sashafrique.com/orders/client-tracking/${o.id}/`;
+  return TRACKING_BASE_URL + encodeURIComponent(o.id);
+}
+
+function moneyFmt_(n){
+  const v = Number(n);
+  if(!isFinite(v)) return '0';
+  return v.toFixed(2).replace(/\.00$/, '');
 }
 
 function fillTemplate(template, o){
+  const price = Number(o.price)||0;
+  const qty = Number(o.qty)||0;
+  const delivery = Number(o.delivery)||0;
+  const subtotal = price * qty;
+  const total = subtotal + delivery;
+  const deliveryLine = delivery > 0 ? ` + GHS ${moneyFmt_(delivery)} delivery` : '';
   return template
-    .replaceAll('{name}', o.achiever)
+    .replaceAll('{name}', (o.achiever||'').split(' ')[0] || 'there')
     .replaceAll('{order_id}', o.id)
     .replaceAll('{delivery_mode}', o.deliveryMode === 'pick_up' ? 'pickup' : 'delivery')
+    .replaceAll('{price}', moneyFmt_(price))
+    .replaceAll('{qty}', String(qty))
+    .replaceAll('{delivery_price}', moneyFmt_(delivery))
+    .replaceAll('{delivery_line}', deliveryLine)
+    .replaceAll('{total}', moneyFmt_(total))
     .replaceAll('{tracking_link}', trackingLinkFor(o));
 }
 
@@ -287,14 +360,40 @@ let companyStats = {csat:4.5, reviewed:75, converted:57};
 const STATUS_FLOW = ['pending','reviewed','designing','paid','ready','delivered'];
 
 /* ---------------- NAV ---------------- */
-const tabIcons = {'Overview':'◆','Order Management':'▤','Enquiries':'✉','Inventory & Ordering':'▦','Bulk Calculator':'#','Price List':'₵','SMS Templates':'💬','Service Manual':'📖','Frame It':'▣'};
+const tabIcons = {'Overview':'◆','Order Management':'▤','Enquiries':'✉','Inventory & Ordering':'▦','Bulk Calculator':'#','Price List':'₵','SMS Templates':'💬','Service Manual':'📖','Frame It':'▣','Activity for Today':'🕐','Achievements':'🏆','Monthly Reports':'📊','Company Updates':'📣','Report an IT Issue':'🛠'};
 const tabs = Object.keys(tabIcons);
 let activeTab = 'Overview';
 
+const navGroups = [
+  { label:'Orders & Enquiries', tabs:['Order Management','Enquiries','Frame It'] },
+  { label:'Tools', tabs:['Inventory & Ordering','Bulk Calculator','Price List','SMS Templates'] },
+  { label:'My Work', tabs:['Activity for Today','Achievements','Monthly Reports'] },
+  { label:'Resources', tabs:['Service Manual','Company Updates','Report an IT Issue'] }
+];
+let collapsedNavGroups = new Set(); // groups collapsed by default? start all open except empty ones
+
+function navBtnHTML(t){
+  return `<button class="${t===activeTab?'active':''}" onclick="switchTab('${t}')"><span class="ic">${tabIcons[t]}</span>${t}</button>`;
+}
+function toggleNavGroup(label){
+  if(collapsedNavGroups.has(label)) collapsedNavGroups.delete(label);
+  else collapsedNavGroups.add(label);
+  renderNav();
+}
 function renderNav(){
-  document.getElementById('nav').innerHTML = tabs.map(t=>
-    `<button class="${t===activeTab?'active':''}" onclick="switchTab('${t}')"><span class="ic">${tabIcons[t]}</span>${t}</button>`
-  ).join('');
+  let html = navBtnHTML('Overview');
+  navGroups.forEach(g=>{
+    const hasActive = g.tabs.includes(activeTab);
+    const collapsed = collapsedNavGroups.has(g.label) && !hasActive;
+    html += `
+      <div class="nav-group${collapsed?' collapsed':''}">
+        <button class="nav-group-toggle" onclick="toggleNavGroup('${g.label}')">
+          <span>${g.label}</span><span class="chev">▾</span>
+        </button>
+        <div class="nav-group-body">${g.tabs.map(navBtnHTML).join('')}</div>
+      </div>`;
+  });
+  document.getElementById('nav').innerHTML = html;
 }
 function switchTab(t){ activeTab=t; renderNav(); renderMain(); }
 
@@ -307,16 +406,27 @@ function setGreeting(){
 function setSyncStatus(state, timeLabel){
   const dot = document.getElementById('syncDot');
   const label = document.getElementById('syncLabel');
+  const indicator = document.getElementById('syncIndicator');
   if(!dot || !label) return;
   if(state === 'synced'){
     dot.style.background = 'var(--green)';
     label.textContent = `Synced with Google Sheets · ${timeLabel || 'just now'}`;
+    if(indicator) { const btn = indicator.querySelector('.sync-retry-btn'); if(btn) btn.remove(); }
   } else if(state === 'syncing'){
     dot.style.background = 'var(--gold)';
     label.textContent = 'Syncing with Google Sheets…';
+    if(indicator) { const btn = indicator.querySelector('.sync-retry-btn'); if(btn) btn.remove(); }
   } else {
     dot.style.background = 'var(--red)';
     label.textContent = 'Could not reach Google Sheets — showing last known data';
+    if(indicator && !indicator.querySelector('.sync-retry-btn')){
+      const btn = document.createElement('button');
+      btn.className = 'sync-retry-btn';
+      btn.textContent = 'Retry now';
+      btn.style.cssText = 'margin-left:6px;background:var(--red);border:none;color:#fff;font-size:10.5px;font-weight:700;padding:2px 8px;border-radius:5px;cursor:pointer;';
+      btn.onclick = () => { loadOrdersFromBackend(); loadAttendance(); };
+      indicator.appendChild(btn);
+    }
   }
 }
 
@@ -367,10 +477,26 @@ function renderClockUI(){
 }
 
 async function toggleClock(){
-  const res = await postAttendance_(clockedIn ? 'clockOut' : 'clockIn');
-  if(res && res.ok) attendanceState = res.attendance;
-  showToast(clockedIn ? 'Clocked out.' : 'Clocked in for today.');
-  renderClockUI();
+  const toggleEl = document.getElementById('clockToggle');
+  if(toggleEl && toggleEl.dataset.busy === '1') return; // ignore double-clicks mid-request
+  if(toggleEl) toggleEl.dataset.busy = '1';
+  const wasIn = clockedIn;
+  try {
+    const res = await postAttendance_(wasIn ? 'clockOut' : 'clockIn');
+    if(!res){
+      showToast('Clock ' + (wasIn?'out':'in') + ' failed: could not reach Google Sheets. Confirm ORDERS_ENDPOINT and that the latest Apps Script version has been redeployed as a Web App.');
+      return;
+    }
+    if(!res.ok){
+      showToast('Clock ' + (wasIn?'out':'in') + ' failed: ' + (res.error || 'unknown backend error. Redeploy Apps Script.'));
+      return;
+    }
+    attendanceState = res.attendance;
+    showToast(wasIn ? 'Clocked out.' : 'Clocked in for today.');
+    renderClockUI();
+  } finally {
+    if(toggleEl) toggleEl.dataset.busy = '';
+  }
 }
 
 function renderBreakChip(){
@@ -470,6 +596,11 @@ function renderMain(){
   else if(activeTab==='SMS Templates') main.innerHTML = viewSMSTemplates();
   else if(activeTab==='Service Manual'){ main.innerHTML = viewServiceManual(); renderManualList(); }
   else if(activeTab==='Frame It') main.innerHTML = viewFrameIt();
+  else if(activeTab==='Activity for Today') main.innerHTML = viewActivityToday();
+  else if(activeTab==='Achievements') main.innerHTML = viewAchievements();
+  else if(activeTab==='Monthly Reports') main.innerHTML = viewMonthlyReports();
+  else if(activeTab==='Company Updates') main.innerHTML = viewCompanyUpdates();
+  else if(activeTab==='Report an IT Issue') main.innerHTML = viewITIssue();
 }
 
 /* ---------------- OVERVIEW (performance now lives here) ---------------- */
@@ -479,8 +610,35 @@ function viewOverview(){
   const lowStock = inventory.filter(i=>i.stock<i.threshold).length;
   const convRate = Math.round((myStats.converted/myStats.reviewed)*100);
   const companyRate = Math.round((companyStats.converted/companyStats.reviewed)*100);
+  const tasks = computeTaskList();
+  const taskCount = tasks.needsReview.length + tasks.awaitingPayment.length + tasks.readyForDelivery.length + tasks.enquiryFollowUps.length;
+  const topTask = tasks.needsReview[0] || tasks.awaitingPayment[0] || tasks.readyForDelivery[0] || (tasks.enquiryFollowUps[0] ? {id:'', name:tasks.enquiryFollowUps[0].name} : null);
+  const latestUpdate = companyUpdates[0];
+  const allGoals = getAllGoals();
+  const topGoal = allGoals.find(g=>goalCurrentValue(g) < g.target) || allGoals[0];
+  const truncate = (s,n) => s && s.length>n ? s.slice(0,n).trim()+'…' : s;
 
   return `
+  <div class="announce-banner" onclick="switchTab('Company Updates')">
+    <div class="announce-badge"><span class="pulse-dot"></span>Announcement</div>
+    <div style="font-size:15px;font-weight:700;color:var(--white);">📣 ${latestUpdate.title}</div>
+    <div class="muted" style="font-size:12.5px;margin-top:5px;">${truncate(latestUpdate.body, 100)}</div>
+    <div style="font-size:11px;color:var(--gold);margin-top:10px;font-weight:600;">View all updates →</div>
+  </div>
+  <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:12px;margin-bottom:14px;">
+    <div class="panel" style="margin-bottom:0;padding:14px 16px;cursor:pointer;" onclick="switchTab('Activity for Today')">
+      <div class="flex-between"><div class="label">✅ Today's Tasks</div><span class="pill">${taskCount}</span></div>
+      <div class="muted" style="font-size:12px;margin-top:5px;">${topTask ? (topTask.id ? `${topTask.id} — ${topTask.name}` : topTask.name) : 'All caught up 🎉'}</div>
+      <div style="font-size:11px;color:var(--gold);margin-top:8px;">View all tasks →</div>
+    </div>
+    <div class="panel" style="margin-bottom:0;padding:14px 16px;cursor:pointer;" onclick="switchTab('Achievements')">
+      <div class="flex-between"><div class="label">🏆 Achievements</div></div>
+      <div class="muted" style="font-size:12px;margin-top:5px;">${topGoal.title}</div>
+      <div class="bar-track" style="margin-top:8px;"><div class="bar-fill" style="width:${Math.min(100, Math.round((goalCurrentValue(topGoal)/topGoal.target)*100))}%;"></div></div>
+      <div style="font-size:11px;color:var(--gold);margin-top:8px;">View all goals →</div>
+    </div>
+  </div>
+
   <div class="cards">
     <div class="card gold"><div class="label">New Orders</div><div class="value">${pendingCount}</div></div>
     <div class="card"><div class="label">Enquiries To Follow Up</div><div class="value">${newEnq}</div></div>
@@ -488,29 +646,31 @@ function viewOverview(){
   </div>
 
   <div class="panel">
-    <h3>Your Performance <span class="pill">This month</span></h3>
-    <div class="cards" style="margin-bottom:8px;">
-      <div class="card">
-        <div class="label">Your CSAT</div>
-        <div class="value">${myStats.csat}<span style="font-size:14px;color:var(--muted)">/5</span></div>
-        <div class="sub">company avg ${companyStats.csat}/5</div>
+    <div class="grid3" style="grid-template-columns:1fr 1fr;">
+      <div>
+        <h3 style="margin-bottom:10px;">Your Performance <span class="pill">This month</span></h3>
+        <div class="cards" style="grid-template-columns:1fr 1fr;margin-bottom:6px;">
+          <div class="card">
+            <div class="label">Your CSAT</div>
+            <div class="value">${myStats.csat}<span style="font-size:14px;color:var(--muted)">/5</span></div>
+            <div class="sub">avg ${companyStats.csat}/5</div>
+          </div>
+          <div class="card">
+            <div class="label">Conversion</div>
+            <div class="value">${convRate}%</div>
+            <div class="sub">co. ${companyRate}%</div>
+          </div>
+        </div>
       </div>
-      <div class="card">
-        <div class="label">Your Conversion Rate</div>
-        <div class="value">${convRate}%</div>
-        <div class="sub">${myStats.converted} of ${myStats.reviewed} reviewed orders → paid</div>
+      <div>
+        <h3 style="margin-bottom:10px;">Quick Actions</h3>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;">
+          <button class="btn small" onclick="switchTab('Order Management')">Review Orders</button>
+          <button class="btn ghost small" onclick="openEnquiryModal()">Log Enquiry</button>
+          <button class="btn ghost small" onclick="switchTab('Inventory & Ordering')">Order Stock</button>
+          <button class="btn ghost small" onclick="switchTab('Bulk Calculator')">Bulk Calculator</button>
+        </div>
       </div>
-    </div>
-    <div class="muted" style="font-size:11.5px;">Company benchmark: ${companyRate}% reviewed → paid. CSAT is pulled from CRM feedback ratings.</div>
-  </div>
-
-  <div class="panel">
-    <h3>Quick Actions</h3>
-    <div style="display:flex;gap:10px;flex-wrap:wrap;">
-      <button class="btn" onclick="switchTab('Order Management')">Review New Orders</button>
-      <button class="btn ghost" onclick="openEnquiryModal()">Log New Enquiry</button>
-      <button class="btn ghost" onclick="switchTab('Inventory & Ordering')">Place Order from Inventory</button>
-      <button class="btn ghost" onclick="switchTab('Bulk Calculator')">Open Bulk Calculator</button>
     </div>
   </div>
   `;
@@ -550,9 +710,21 @@ function cap(s){ return s.charAt(0).toUpperCase()+s.slice(1); }
 
 /* ---------------- ORDER DETAIL / EDIT MODAL (with design proofs) ---------------- */
 function openOrder(id){
-  const o = orders.find(x=>x.id===id);
-  document.getElementById('orderModalContent').innerHTML = renderOrderModal(o);
-  document.getElementById('orderModalBg').classList.add('open');
+  const o = orders.find(x=>String(x.id)===String(id));
+  if(!o){
+    // Order isn't in the local cache yet — most common cause is the 30s poll hasn't run since
+    // a new order arrived. Refresh from the sheet and let the user tap Update again.
+    showToast('Order ' + id + ' not found in cache. Refreshing from Google Sheets...');
+    loadOrdersFromBackend();
+    return;
+  }
+  try {
+    document.getElementById('orderModalContent').innerHTML = renderOrderModal(o);
+    document.getElementById('orderModalBg').classList.add('open');
+  } catch(err){
+    console.error('openOrder failed for', id, err, o);
+    showToast('Could not open order ' + id + ' - ' + (err && err.message ? err.message : 'unknown error'));
+  }
 }
 function closeOrder(){ document.getElementById('orderModalBg').classList.remove('open'); }
 
@@ -579,7 +751,21 @@ function handleUpload(e, orderId, field){
   reader.readAsDataURL(file);
 }
 
+function pastOrdersFor(o){
+  if(!o.phone) return [];
+  const clean = cleanPhoneForSMS(o.phone);
+  if(!clean) return [];
+  return orders.filter(x => x.id!==o.id && cleanPhoneForSMS(x.phone)===clean)
+    .sort((a,b)=> a.time < b.time ? 1 : -1);
+}
+
 function renderOrderModal(o){
+  // Defensive defaults — a null activity/chat/customerFiles array used to break the modal silently.
+  o.activity = Array.isArray(o.activity) ? o.activity : [];
+  o.chat = Array.isArray(o.chat) ? o.chat : [];
+  o.customerFiles = Array.isArray(o.customerFiles) ? o.customerFiles : [];
+  ['achiever','phone','address','pattern','left','right','method','deliveryMode'].forEach(function(k){ if(o[k]==null) o[k]=''; });
+  if(o.price==null) o.price=0; if(o.qty==null) o.qty=1; if(o.delivery==null) o.delivery=0;
   return `
   <div class="modal-head">
     <div><b style="color:var(--gold);font-family:'Playfair Display',serif;">Order ${o.id}</b> <span class="muted">— ${o.achiever}</span></div>
@@ -592,7 +778,10 @@ function renderOrderModal(o){
       <div class="field"><label>Phone</label><input id="f_phone" value="${o.phone}"></div>
       <div class="field"><label>Address</label><input id="f_address" value="${o.address}"></div>
       <button class="btn ghost" style="width:100%;margin-bottom:8px;">Call Achiever</button>
-      <button class="btn ghost" style="width:100%;margin-bottom:16px;" onclick="openChat('${o.id}')">Chat Achiever ${o.chat && o.chat.length ? `<span class="pill" style="margin-left:6px;">${o.chat.length}</span>`:''}</button>
+      <div style="display:flex;gap:8px;margin-bottom:16px;">
+        <button class="btn ghost" style="flex:1;" onclick="openChat('${o.id}')">Chat Achiever ${o.chat && o.chat.length ? `<span class="pill" style="margin-left:6px;">${o.chat.length}</span>`:''}</button>
+        ${whatsappLinkFor(o) ? `<a class="btn ghost" style="flex:1;text-align:center;color:#25D366;border-color:rgba(37,211,102,.4);text-decoration:none;" href="${whatsappLinkFor(o)}" target="_blank" rel="noopener">💬 WhatsApp</a>` : `<span class="btn ghost" style="flex:1;text-align:center;opacity:.4;cursor:not-allowed;" title="No valid phone number on this order">💬 WhatsApp</span>`}
+      </div>
 
       <label style="display:block;color:var(--muted);font-size:10.5px;text-transform:uppercase;letter-spacing:.04em;margin-bottom:8px;">Customer Uploads</label>
       ${(o.customerFiles && o.customerFiles.length) ? o.customerFiles.map(f=>`
@@ -601,6 +790,18 @@ function renderOrderModal(o){
           <span class="muted" style="font-size:11px;">${f.uploadedAt}</span>
         </div>
       `).join('') : `<div class="muted" style="font-size:12px;">No files uploaded by the achiever for this order.</div>`}
+
+      <label style="display:block;color:var(--muted);font-size:10.5px;text-transform:uppercase;letter-spacing:.04em;margin:16px 0 8px;">Past Orders — This Achiever</label>
+      ${(() => {
+        const past = pastOrdersFor(o);
+        if(!past.length) return `<div class="muted" style="font-size:12px;">No other orders on record for this phone number.</div>`;
+        return `<div style="max-height:150px;overflow:auto;">${past.map(p=>`
+          <div class="activity-item" style="cursor:pointer;" onclick="openOrder('${p.id}')">
+            <div class="dot" style="background:var(--muted);"></div>
+            <div><strong>${p.id}</strong> — ${p.time.split(' ')[0]} <span class="badge b-${p.status==='delivered'?'converted':p.status==='pending'?'new':'following'}" style="margin-left:4px;">${cap(p.status)}</span></div>
+          </div>
+        `).join('')}</div>`;
+      })()}
     </div>
     <div>
       <h4 style="color:var(--gold);margin-bottom:12px;">Order Details (editable)</h4>
@@ -645,10 +846,66 @@ function renderOrderModal(o){
         <input type="checkbox" id="f_notifyProduction" checked style="width:auto;"> Notify production of this change
       </label>
       <button class="btn ghost" style="width:100%;margin-bottom:8px;background:var(--green);border-color:var(--green);color:#fff;" onclick="window.open('https://generate.sashafrique.com/', '_blank')">🧾 Open Invoice / Receipt Generator</button>
+      ${(o.qty||1) > 1 ? `<button class="btn ghost" style="width:100%;margin-bottom:8px;" onclick="downloadOrderSheet('${o.id}')">📄 Download Bulk Order Sheet (${o.qty})</button>` : ''}
       <button class="btn" style="width:100%;" onclick="saveOrder('${o.id}')">Save Changes</button>
     </div>
   </div>
   `;
+}
+
+function downloadOrderSheet(id){
+  const o = orders.find(x=>x.id===id);
+  if(!o) return;
+  // Pull current field values if the modal is open, so edits not yet saved are reflected
+  const val = (elId, fallback) => { const el = document.getElementById(elId); return el ? el.value : fallback; };
+  const achiever = val('f_achiever', o.achiever);
+  const phone = val('f_phone', o.phone);
+  const address = val('f_address', o.address);
+  const pattern = val('f_pattern', o.pattern);
+  const left = val('f_left', o.left);
+  const right = val('f_right', o.right);
+  const method = val('f_method', o.method);
+  const qty = val('f_qty', o.qty);
+  const price = val('f_price', o.price);
+  const deliveryMode = val('f_deliveryMode', o.deliveryMode);
+  const filesList = (o.customerFiles||[]).map(f=>`<li>${f.name} — uploaded ${f.uploadedAt}</li>`).join('') || '<li>No files uploaded</li>';
+  const html = `<!DOCTYPE html><html><head><meta charset="utf-8"><title>Bulk Order Sheet — ${o.id}</title>
+  <style>
+    body{font-family:Arial,sans-serif;background:#fff;color:#111;padding:32px;max-width:720px;margin:0 auto;}
+    h1{font-size:20px;border-bottom:3px solid #FAB202;padding-bottom:8px;}
+    table{width:100%;border-collapse:collapse;margin-top:16px;}
+    td,th{padding:8px 10px;border:1px solid #ddd;text-align:left;font-size:13px;}
+    th{background:#f5f5f5;width:180px;}
+    .badge{display:inline-block;background:#FAB202;color:#111;padding:2px 10px;border-radius:12px;font-size:11px;font-weight:700;}
+    ul{font-size:13px;}
+    @media print{ body{padding:0;} }
+  </style></head><body>
+    <h1>Sash Afrique — Bulk Order Production Sheet</h1>
+    <p><span class="badge">Order ${o.id}</span> &nbsp; Generated ${new Date().toLocaleString('en-GB')}</p>
+    <table>
+      <tr><th>Achiever / Contact</th><td>${achiever}</td></tr>
+      <tr><th>Phone</th><td>${phone}</td></tr>
+      <tr><th>Address</th><td>${address}</td></tr>
+      <tr><th>Pattern</th><td>${pattern}</td></tr>
+      <tr><th>Left Inscription</th><td>${left}</td></tr>
+      <tr><th>Right Inscription</th><td>${right}</td></tr>
+      <tr><th>Method</th><td>${method}</td></tr>
+      <tr><th>Quantity</th><td><b>${qty}</b></td></tr>
+      <tr><th>Price Each</th><td>GH₵${price}</td></tr>
+      <tr><th>Total</th><td><b>GH₵${(Number(price)*Number(qty)).toFixed(2)}</b></td></tr>
+      <tr><th>Delivery Mode</th><td>${deliveryMode==='delivery'?'Delivery':'Pick-up'}</td></tr>
+    </table>
+    <h3 style="margin-top:20px;font-size:14px;">Attached Achiever Files</h3>
+    <ul>${filesList}</ul>
+    <p style="margin-top:30px;font-size:11px;color:#888;">This sheet reflects the order details as of the time it was generated. Re-download after any edits to get the latest version.</p>
+  </body></html>`;
+  const blob = new Blob([html], {type:'text/html'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = `sash-afrique-order-sheet-${o.id}.html`;
+  document.body.appendChild(a); a.click(); document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+  showToast(`Order sheet for ${o.id} downloaded.`);
 }
 
 async function saveOrder(id){
@@ -673,13 +930,15 @@ async function saveOrder(id){
     if(String(before[k]) !== String(newVals[k])) changes.push(`${labelFor(k)}: "${before[k]}" → "${newVals[k]}"`);
   });
   Object.assign(o, newVals);
-  pushFields(id, {
+  const fieldsSaved = await pushFields(id, {
     achiever: newVals.achiever, phone: newVals.phone, address: newVals.address,
     pattern: newVals.pattern, left: newVals.left, right: newVals.right,
     method: newVals.method, price: newVals.price, qty: newVals.qty,
     deliveryMode: newVals.deliveryMode, delivery: newVals.delivery
   });
-  if(before.status !== newVals.status) pushStatus(id, newVals.status);
+  let statusSaved = true;
+  if(before.status !== newVals.status) statusSaved = await pushStatus(id, newVals.status);
+  const savedToSheet = fieldsSaved && statusSaved;
   const now = new Date();
   const timeStr = now.toLocaleString('en-GB',{day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'});
   const notifyProduction = document.getElementById('f_notifyProduction').checked;
@@ -687,16 +946,20 @@ async function saveOrder(id){
   if(changes.length){
     o.activity.push({
       t:timeStr,
-      text:`Order updated by Esther Gyasi${notifyProduction ? ' — production notified' : ' — production not notified'}`,
+      text:`Order updated by Esther Gyasi${notifyProduction ? ' — production notified' : ' — production not notified'}${savedToSheet ? '' : ' — ⚠ NOT SYNCED TO GOOGLE SHEETS'}`,
       diff:changes.join(' · ')
     });
   } else {
     o.activity.push({t:timeStr, text:'Order reviewed, no changes made'});
   }
   closeOrder(); renderMain();
-  showToast(changes.length
-    ? `Order ${id} updated.${notifyProduction?' Production notified.':''}${notify?' Sending SMS to achiever...':''}`
-    : `Order ${id} saved.`);
+  if(!savedToSheet){
+    showToast(`⚠ Order ${id} saved on this device only — could not reach Google Sheets. Tap the order and Save again once you're back online, or these changes may be lost.`, {warn:true});
+  } else {
+    showToast(changes.length
+      ? `Order ${id} updated and synced.${notifyProduction?' Production notified.':''}${notify?' Sending SMS to achiever...':''}`
+      : `Order ${id} saved.`);
+  }
 
   if(changes.length && notify){
     const message = smsTemplateForStatus(o);
@@ -722,12 +985,15 @@ function labelFor(k){
   const map = {achiever:'Achiever',phone:'Phone',address:'Address',pattern:'Pattern',left:'Left Inscription',right:'Right Inscription',method:'Method',price:'Price Each',qty:'Quantity',deliveryMode:'Delivery Mode',delivery:'Delivery Price',status:'Status'};
   return map[k]||k;
 }
-function showToast(msg){
+function showToast(msg, opts){
+  opts = opts || {};
   let t = document.createElement('div');
   t.textContent = msg;
-  t.style.cssText = 'position:fixed;bottom:20px;right:20px;background:var(--gold);color:#111;padding:12px 18px;border-radius:8px;font-size:13px;font-weight:700;z-index:100;box-shadow:0 4px 20px rgba(0,0,0,.4);';
+  const bg = opts.warn ? 'var(--red)' : 'var(--gold)';
+  const color = opts.warn ? '#fff' : '#111';
+  t.style.cssText = `position:fixed;bottom:20px;right:20px;max-width:340px;background:${bg};color:${color};padding:12px 18px;border-radius:8px;font-size:13px;font-weight:700;z-index:100;box-shadow:0 4px 20px rgba(0,0,0,.4);`;
   document.body.appendChild(t);
-  setTimeout(()=>t.remove(), 3200);
+  setTimeout(()=>t.remove(), opts.warn ? 6000 : 3200);
 }
 
 /* ---------------- CHAT (per-order achiever messaging) ---------------- */
@@ -802,12 +1068,15 @@ async function sendChatMessage(orderId){
   const t = now.toLocaleString('en-US',{weekday:'short',month:'short',day:'2-digit',year:'numeric',hour:'numeric',minute:'2-digit'});
   o.chat = o.chat || [];
   o.chat.push({from:'officer', text, t});
-  pushChatMessage(orderId, 'officer', text);
+  const chatSynced = await pushChatMessage(orderId, 'officer', text);
   const notify = document.getElementById('chat_notify').checked;
   input.value='';
   document.getElementById('chatModalContent').innerHTML = renderChatModal(orderId);
   scrollChatToBottom();
   refreshBell();
+  if(!chatSynced){
+    showToast(`⚠ Message shown here but not saved to Google Sheets — reconnect and resend so other staff can see it.`, {warn:true});
+  }
   if(notify){
     showToast('Sending SMS to achiever...');
     const result = await sendSMS(o.phone, text);
@@ -827,35 +1096,59 @@ async function sendChatMessage(orderId){
 }
 
 /* ---------------- ENQUIRIES (with log form) ---------------- */
+/* ---------------- ENQUIRY FOLLOW-UP CONFIG ----------------
+   48hr cadence between follow-up attempts. After MAX_FOLLOWUPS
+   consecutive no-response attempts, the enquiry auto-cancels. */
+const FOLLOWUP_HOURS = 48;
+const MAX_FOLLOWUPS = 3;
+
+function hoursFromNow(h){ return new Date(Date.now() + h*3600*1000).toISOString(); }
+function fmtDT(iso){ if(!iso) return '—'; const d=new Date(iso); return d.toLocaleString('en-GB',{day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit'}); }
+function isOverdue(iso){ return iso && new Date(iso).getTime() < Date.now(); }
+
 function viewEnquiries(){
   const total = enquiries.length;
   const converted = enquiries.filter(e=>e.status==='converted').length;
   const rate = Math.round((converted/total)*100);
+  const dueCount = enquiries.filter(e=>['new','following'].includes(e.status) && isOverdue(e.nextFollowUpDue)).length;
   return `
   <div class="cards">
     <div class="card"><div class="label">Total Enquiries</div><div class="value">${total}</div></div>
     <div class="card"><div class="label">Converted to Orders</div><div class="value">${converted}</div></div>
     <div class="card"><div class="label">Conversion Rate</div><div class="value">${rate}%</div></div>
-    <div class="card"><div class="label">Awaiting Follow-up</div><div class="value">${enquiries.filter(e=>e.status==='new'||e.status==='following').length}</div></div>
+    <div class="card ${dueCount ? 'gold' : ''}"><div class="label">Due for Follow-up</div><div class="value">${dueCount}</div></div>
   </div>
   <div class="panel">
     <h3>Enquiry Tracker <button class="btn small" onclick="openEnquiryModal()">+ Log New Enquiry</button></h3>
+    <div class="muted" style="font-size:12px;margin-bottom:12px;">Follow-ups are due every ${FOLLOWUP_HOURS}hrs. After ${MAX_FOLLOWUPS} no-response attempts, an enquiry auto-cancels. Click a row to see the full follow-up history — useful if someone else picks it up.</div>
     <table>
-      <tr><th>Name</th><th>Phone</th><th>Channel</th><th>Date</th><th>Status</th><th>Actions</th></tr>
-      ${enquiries.length ? enquiries.map(e=>`
+      <tr><th>Name</th><th>Phone</th><th>Channel</th><th>Logged</th><th>Status</th><th>Last Update</th><th>Next Follow-up</th><th>Actions</th></tr>
+      ${enquiries.length ? enquiries.map(e=>{
+        const active = ['new','following'].includes(e.status);
+        const overdue = active && isOverdue(e.nextFollowUpDue);
+        const last = e.followUps && e.followUps.length ? e.followUps[e.followUps.length-1] : null;
+        const lastPreview = last ? (last.note && last.note.length > 42 ? last.note.slice(0,42).trim()+'…' : (last.note||'—')) : '—';
+        return `
         <tr>
-          <td>${e.name}</td><td>${e.phone}</td><td>${e.channel}</td><td>${e.date}</td>
+          <td style="cursor:pointer;" onclick="openEnquiryDetail('${e.id}')"><u>${e.name}</u></td>
+          <td>${e.phone||'—'}</td><td>${e.channel}</td><td>${e.date}</td>
           <td><span class="badge b-${e.status}">${cap(e.status)}</span></td>
-          <td>
-            <select onchange="updateEnquiryStatus('${e.id}', this.value)" style="background:var(--panel2);border:1px solid var(--border);color:var(--text);padding:5px 9px;border-radius:6px;font-size:11.5px;">
+          <td style="cursor:pointer;max-width:180px;" onclick="openEnquiryDetail('${e.id}')" title="${last && last.note ? last.note.replace(/"/g,'') : ''}">
+            <span class="muted" style="font-size:12px;">${lastPreview}</span>
+          </td>
+          <td>${active ? `<span class="${overdue?'followup-overdue':'followup-due'}">${overdue?'Overdue — ':''}${fmtDT(e.nextFollowUpDue)}</span>` : '—'}</td>
+          <td style="white-space:nowrap;">
+            ${active ? `<button class="btn small" onclick="openFollowUpModal('${e.id}')">Log Follow-up</button>` : ''}
+            <select onchange="updateEnquiryStatus('${e.id}', this.value)" style="background:var(--panel2);border:1px solid var(--border);color:var(--text);padding:5px 9px;border-radius:6px;font-size:11.5px;margin-left:6px;">
               <option value="new" ${e.status==='new'?'selected':''}>New</option>
               <option value="following" ${e.status==='following'?'selected':''}>Following Up</option>
               <option value="converted" ${e.status==='converted'?'selected':''}>Converted</option>
               <option value="lost" ${e.status==='lost'?'selected':''}>Lost</option>
+              <option value="cancelled" ${e.status==='cancelled'?'selected':''}>Cancelled</option>
             </select>
           </td>
         </tr>
-      `).join('') : `<tr><td colspan="6" class="muted" style="text-align:center;padding:20px 0;">No enquiries logged yet. Click <b>+ Log New Enquiry</b> to add one.</td></tr>`}
+      `;}).join('') : `<tr><td colspan="8" class="muted" style="text-align:center;padding:20px 0;">No enquiries logged yet. Click <b>+ Log New Enquiry</b> to add one.</td></tr>`}
     </table>
   </div>
   `;
@@ -863,6 +1156,7 @@ function viewEnquiries(){
 function updateEnquiryStatus(id, status){
   const e = enquiries.find(x=>x.id===id);
   e.status = status;
+  if(!['new','following'].includes(status)) e.nextFollowUpDue = null;
   renderMain();
   showToast(`${e.name} marked as ${cap(status)}.`);
 }
@@ -874,7 +1168,8 @@ function openEnquiryModal(){
     <div class="field"><label>Channel</label>
       <select id="enq_channel"><option>Instagram</option><option>WhatsApp</option><option>Referral</option><option>Website</option><option>Walk-in</option><option>Other</option></select>
     </div>
-    <div class="field"><label>Notes</label><textarea id="enq_notes" placeholder="What are they asking about?"></textarea></div>
+    <div class="field"><label>What did they say?</label><textarea id="enq_notes" placeholder="What are they asking about?"></textarea></div>
+    <div class="muted" style="font-size:11.5px;margin-bottom:12px;">A follow-up will automatically come due in ${FOLLOWUP_HOURS} hours.</div>
     <button class="btn" style="width:100%;" onclick="saveEnquiry()">Save Enquiry</button>
   `;
   document.getElementById('enquiryModalBg').classList.add('open');
@@ -883,15 +1178,91 @@ function closeEnquiryModal(){ document.getElementById('enquiryModalBg').classLis
 function saveEnquiry(){
   const name = document.getElementById('enq_name').value.trim();
   if(!name){ showToast("Please enter the achiever's name."); return; }
+  const notes = document.getElementById('enq_notes').value.trim();
   const newId = 'ENQ-' + (100 + enquiries.length + 1);
   const today = new Date().toISOString().split('T')[0];
   enquiries.unshift({
     id:newId, name, phone:document.getElementById('enq_phone').value,
-    channel:document.getElementById('enq_channel').value, date:today, status:'new', agent:AGENT_NAME
+    channel:document.getElementById('enq_channel').value, date:today, status:'new', agent:AGENT_NAME,
+    nextFollowUpDue: hoursFromNow(FOLLOWUP_HOURS),
+    noResponseStreak: 0,
+    followUps: [{ t: new Date().toISOString(), agent: AGENT_NAME, type:'logged', note: notes || '(no notes entered)' }]
   });
   closeEnquiryModal();
   switchTab('Enquiries');
-  showToast(`Enquiry logged for ${name}.`);
+  showToast(`Enquiry logged for ${name}. Follow-up due in ${FOLLOWUP_HOURS}hrs.`);
+}
+
+/* ---------------- FOLLOW-UP LOGGING ---------------- */
+function openFollowUpModal(id){
+  const e = enquiries.find(x=>x.id===id);
+  document.getElementById('enquiryModalContent').innerHTML = `
+    <div class="modal-head"><h3 style="color:var(--gold);">Log Follow-up — ${e.name}</h3><button class="close-x" onclick="closeEnquiryModal()">✕</button></div>
+    <div class="muted" style="font-size:12px;margin-bottom:12px;">Attempt ${e.followUps.filter(f=>f.type==='followup').length + 1}. No-response streak so far: ${e.noResponseStreak||0}/${MAX_FOLLOWUPS}.</div>
+    <div class="field"><label>Outcome</label>
+      <select id="fu_outcome">
+        <option value="responded_interested">Responded — still interested</option>
+        <option value="responded_not_interested">Responded — not interested</option>
+        <option value="no_response">No response</option>
+      </select>
+    </div>
+    <div class="field"><label>What did they say? (leave blank if no response)</label><textarea id="fu_note" placeholder="e.g. Said they'll confirm by Friday once they pick a pattern"></textarea></div>
+    <button class="btn" style="width:100%;" onclick="saveFollowUp('${id}')">Save Follow-up</button>
+  `;
+  document.getElementById('enquiryModalBg').classList.add('open');
+}
+function saveFollowUp(id){
+  const e = enquiries.find(x=>x.id===id);
+  const outcome = document.getElementById('fu_outcome').value;
+  const note = document.getElementById('fu_note').value.trim();
+  const entry = { t: new Date().toISOString(), agent: AGENT_NAME, type:'followup', outcome, note: note || (outcome==='no_response' ? '(no response received)' : '') };
+  e.followUps.push(entry);
+
+  if(outcome === 'no_response'){
+    e.noResponseStreak = (e.noResponseStreak||0) + 1;
+    if(e.noResponseStreak >= MAX_FOLLOWUPS){
+      e.status = 'cancelled';
+      e.nextFollowUpDue = null;
+      e.followUps.push({ t: new Date().toISOString(), agent: 'System', type:'auto', note:`Auto-cancelled after ${MAX_FOLLOWUPS} consecutive no-response follow-ups.` });
+    } else {
+      e.status = 'following';
+      e.nextFollowUpDue = hoursFromNow(FOLLOWUP_HOURS);
+    }
+  } else if(outcome === 'responded_interested'){
+    e.noResponseStreak = 0;
+    e.status = 'following';
+    e.nextFollowUpDue = hoursFromNow(FOLLOWUP_HOURS);
+  } else if(outcome === 'responded_not_interested'){
+    e.status = 'lost';
+    e.nextFollowUpDue = null;
+  }
+
+  closeEnquiryModal();
+  switchTab('Enquiries');
+  showToast(e.status==='cancelled' ? `${e.name} auto-cancelled after ${MAX_FOLLOWUPS} no-response follow-ups.` : `Follow-up logged for ${e.name}.`);
+}
+
+/* ---------------- ENQUIRY DETAIL / HANDOFF HISTORY ---------------- */
+function openEnquiryDetail(id){
+  const e = enquiries.find(x=>x.id===id);
+  const typeLabel = { logged:'📝 Logged', followup:'📞 Follow-up', auto:'⚙️ System' };
+  document.getElementById('enquiryModalContent').innerHTML = `
+    <div class="modal-head"><h3 style="color:var(--gold);">${e.name}</h3><button class="close-x" onclick="closeEnquiryModal()">✕</button></div>
+    <div class="muted" style="font-size:12.5px;margin-bottom:14px;">
+      ${e.phone||'No phone'} · ${e.channel} · Logged ${e.date} by ${e.agent}<br>
+      Status: <span class="badge b-${e.status}">${cap(e.status)}</span>
+      ${['new','following'].includes(e.status) ? ` · Next follow-up: <span class="${isOverdue(e.nextFollowUpDue)?'followup-overdue':'followup-due'}">${fmtDT(e.nextFollowUpDue)}</span>` : ''}
+    </div>
+    <h4 style="font-size:12.5px;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px;">Follow-up History</h4>
+    ${e.followUps.slice().reverse().map(f=>`
+      <div class="followup-log-item">
+        <div class="fu-meta">${typeLabel[f.type]||f.type} · ${f.agent} · ${fmtDT(f.t)}${f.outcome?` · ${f.outcome.replace(/_/g,' ')}`:''}</div>
+        <div style="font-size:13px;">${f.note}</div>
+      </div>
+    `).join('')}
+    ${['new','following'].includes(e.status) ? `<button class="btn small" style="width:100%;margin-top:10px;" onclick="closeEnquiryModal(); openFollowUpModal('${e.id}')">Log Follow-up</button>` : ''}
+  `;
+  document.getElementById('enquiryModalBg').classList.add('open');
 }
 
 /* ---------------- INVENTORY & ORDERING ---------------- */
@@ -1130,6 +1501,413 @@ function viewFrameIt(){
   `;
 }
 
+/* ---------------- TODAY'S TASKS (formerly a passive log — now actionable) ---------------- */
+let taskMonth = 'all'; // 'all' or 'YYYY-MM'
+let expandedTaskSections = new Set();
+
+function availableTaskMonths(){
+  const set = new Set();
+  orders.forEach(o=>{
+    const d = parseOrderDate(o.time);
+    if(d) set.add(`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`);
+  });
+  return Array.from(set).sort().reverse();
+}
+
+function computeTaskList(){
+  const inMonth = (timeStr) => {
+    if(taskMonth==='all') return true;
+    const d = parseOrderDate(timeStr);
+    if(!d) return false;
+    const key = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;
+    return key===taskMonth;
+  };
+  const needsReview = orders.filter(o=>o.status==='pending' && inMonth(o.time))
+    .map(o=>({ id:o.id, name:o.achiever, sortKey:o.time }))
+    .sort((a,b)=> a.sortKey < b.sortKey ? -1 : 1);
+  const awaitingPayment = orders.filter(o=>(o.status==='reviewed' || o.status==='designing') && inMonth(o.time))
+    .map(o=>({ id:o.id, name:o.achiever, sortKey:o.time }))
+    .sort((a,b)=> a.sortKey < b.sortKey ? -1 : 1);
+  const readyForDelivery = orders.filter(o=>o.status==='ready' && inMonth(o.time))
+    .map(o=>({ id:o.id, name:o.achiever, sortKey:o.time }))
+    .sort((a,b)=> a.sortKey < b.sortKey ? -1 : 1);
+  const enquiryFollowUps = (taskMonth==='all' ? enquiries : []).filter(e=>['new','following'].includes(e.status) && isOverdue(e.nextFollowUpDue))
+    .map(e=>({ id:e.id, name:e.name }));
+  return { needsReview, awaitingPayment, readyForDelivery, enquiryFollowUps };
+}
+
+function toggleTaskSection(key){
+  if(expandedTaskSections.has(key)) expandedTaskSections.delete(key);
+  else expandedTaskSections.add(key);
+  renderMain();
+}
+
+function viewActivityToday(){
+  const t = computeTaskList();
+  const total = t.needsReview.length + t.awaitingPayment.length + t.readyForDelivery.length + t.enquiryFollowUps.length;
+  const months = availableTaskMonths();
+  const CAP = 4;
+
+  const column = (key, title, accent, items, emptyMsg, onClickTab, isEnquiry) => {
+    const expanded = expandedTaskSections.has(key);
+    const shown = expanded ? items : items.slice(0, CAP);
+    const remaining = items.length - shown.length;
+    return `
+    <div class="kanban-col" style="border-top:3px solid ${accent};">
+      <div class="kanban-col-head">
+        <span>${title}</span><span class="pill">${items.length}</span>
+      </div>
+      <div class="kanban-col-body">
+        ${shown.length ? shown.map(x=>`
+          <div class="kanban-card" onclick="${isEnquiry ? `switchTab('Enquiries'); setTimeout(()=>openFollowUpModal('${x.id}'),50)` : `switchTab('${onClickTab}'); setTimeout(()=>openOrder('${x.id}'),50)`}">
+            ${isEnquiry ? `<div class="kc-name">${x.name}</div><div class="kc-sub">Tap to log follow-up</div>` : `<div class="kc-id">${x.id}</div><div class="kc-name">${x.name}</div>`}
+          </div>
+        `).join('') : `<div class="muted" style="font-size:12px;padding:6px 2px;">${emptyMsg}</div>`}
+        ${remaining > 0 ? `<button class="btn ghost small" style="width:100%;margin-top:4px;" onclick="toggleTaskSection('${key}')">+ ${remaining} more</button>` : ''}
+        ${expanded && items.length > CAP ? `<button class="btn ghost small" style="width:100%;margin-top:4px;" onclick="toggleTaskSection('${key}')">Show less</button>` : ''}
+      </div>
+    </div>
+  `;};
+
+  return `
+  <div class="panel">
+    <div class="flex-between" style="margin-bottom:4px;">
+      <h3 style="margin-bottom:0;">Today's Tasks <span class="pill">${total} to do</span></h3>
+      <select onchange="taskMonth=this.value; expandedTaskSections=new Set(); renderMain();" style="min-width:150px;">
+        <option value="all" ${taskMonth==='all'?'selected':''}>All months</option>
+        ${months.map(m=>{
+          const [y,mm] = m.split('-').map(Number);
+          const label = new Date(y, mm-1, 1).toLocaleString('en-US',{month:'long', year:'numeric'});
+          return `<option value="${m}" ${m===taskMonth?'selected':''}>${label}</option>`;
+        }).join('')}
+      </select>
+    </div>
+    <div class="muted" style="font-size:12px;margin-bottom:14px;">Tap any card to jump straight to it. Showing ${taskMonth==='all' ? 'all months' : 'selected month'} only.</div>
+    ${total===0 ? `<div class="note-banner">You're fully caught up. Nice work! 🎉</div>` : ''}
+    <div class="kanban-board">
+      ${column('review', '🔴 Needs Review', 'var(--red)', t.needsReview, 'Nothing new to review.', 'Order Management')}
+      ${column('payment', '🟡 Payment Follow-up', 'var(--gold)', t.awaitingPayment, 'Nothing waiting on payment.', 'Order Management')}
+      ${column('delivery', '🟢 Ready for Handover', 'var(--green)', t.readyForDelivery, 'Nothing ready today.', 'Order Management')}
+      ${column('enquiry', '📞 Enquiries Overdue', 'var(--blue)', t.enquiryFollowUps, 'Nothing overdue.', 'Enquiries', true)}
+    </div>
+  </div>
+  `;
+}
+
+/* ---------------- MY GOALS (personal target-setting for motivation) ---------------- */
+function currentMonthOrders(){
+  const now = new Date();
+  return orders.filter(o=>{
+    const d = parseOrderDate(o.time);
+    return d && d.getFullYear()===now.getFullYear() && d.getMonth()===now.getMonth();
+  });
+}
+
+const builtInGoals = [
+  { id:'reviewed', title:'Review Orders This Month', target:40, type:'auto', icon:'📋' },
+  { id:'converted', title:'Convert Orders to Paid', target:25, type:'auto', icon:'💰' },
+  { id:'csat', title:'Keep CSAT Above 4.5', target:4.5, type:'threshold', icon:'⭐' }
+];
+let customGoals = []; // {id, title, target, current}
+
+function goalCurrentValue(goal){
+  if(goal.type==='auto'){
+    const mo = currentMonthOrders();
+    if(goal.id==='reviewed') return mo.filter(o=>o.status!=='pending').length;
+    if(goal.id==='converted') return mo.filter(o=>['paid','ready','delivered'].includes(o.status)).length;
+  }
+  if(goal.type==='threshold' && goal.id==='csat') return myStats.csat;
+  return goal.current || 0;
+}
+
+function getAllGoals(){
+  return [...builtInGoals, ...customGoals.map(g=>({...g, type:'manual'}))];
+}
+
+function goalBar(goal){
+  const current = goalCurrentValue(goal);
+  const pct = Math.min(100, Math.round((current/goal.target)*100));
+  const hit = current >= goal.target;
+  return `
+  <div>
+    <div class="flex-between" style="margin-bottom:5px;">
+      <span style="font-size:13px;">${goal.icon||'🎯'} ${goal.title}</span>
+      <span style="font-size:12px;color:${hit?'var(--green)':'var(--muted)'};font-weight:${hit?'700':'400'};">${current}${goal.type==='threshold'?'':`/${goal.target}`} ${hit?'✅':''}</span>
+    </div>
+    <div class="bar-track"><div class="bar-fill" style="width:${pct}%;background:${hit?'var(--green)':'var(--gold)'};"></div></div>
+    ${!hit && goal.type!=='threshold' ? `<div class="muted" style="font-size:11px;margin-top:3px;">${goal.target-current} more to hit your goal 🔥</div>` : ''}
+    ${goal.type==='manual' ? `<button class="btn ghost small" style="margin-top:6px;" onclick="incrementCustomGoal('${goal.id}')">+1</button>` : ''}
+  </div>
+  `;
+}
+
+function viewAchievements(){
+  const allGoals = getAllGoals();
+  return `
+  <div class="panel">
+    <h3>🏆 My Goals</h3>
+    <div class="muted" style="font-size:12px;margin-bottom:16px;">Set targets for yourself and watch your progress build through the month.</div>
+    <div style="display:flex;flex-direction:column;gap:16px;">
+      ${allGoals.map(g=>goalBar(g)).join('')}
+    </div>
+  </div>
+  <div class="panel">
+    <h3>Add a Personal Goal</h3>
+    <div class="row2" style="max-width:520px;">
+      <div class="field"><label>Goal Title</label><input id="newGoalTitle" placeholder="e.g. Send 10 thank-you messages"></div>
+      <div class="field"><label>Target Number</label><input id="newGoalTarget" type="number" min="1" placeholder="10"></div>
+    </div>
+    <button class="btn" onclick="addCustomGoal()">Add Goal</button>
+  </div>
+  `;
+}
+
+function addCustomGoal(){
+  const title = document.getElementById('newGoalTitle').value.trim();
+  const target = parseInt(document.getElementById('newGoalTarget').value, 10);
+  if(!title || !target || target<1){ showToast('Add a title and a target number.'); return; }
+  customGoals.push({ id:'custom_'+Date.now(), title, target, current:0, icon:'🎯' });
+  showToast('Goal added — go get it!');
+  renderMain();
+}
+
+function incrementCustomGoal(id){
+  const g = customGoals.find(x=>x.id===id);
+  if(!g) return;
+  g.current = Math.min(g.target, g.current+1);
+  if(g.current>=g.target) showToast(`🎉 Goal achieved: ${g.title}`);
+  renderMain();
+}
+
+/* ---------------- MONTHLY REPORTS ---------------- */
+function parseOrderDate(timeStr){
+  const [datePart] = (timeStr||'').split(' ');
+  const [d,m,y] = (datePart||'').split('-').map(Number);
+  if(!d||!m||!y) return null;
+  return new Date(y, m-1, d);
+}
+
+let reportMonth = null; // 'YYYY-MM'
+
+function availableReportMonths(){
+  const set = new Set();
+  orders.forEach(o=>{
+    const d = parseOrderDate(o.time);
+    if(d) set.add(`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`);
+  });
+  return Array.from(set).sort().reverse();
+}
+
+function viewMonthlyReports(){
+  const months = availableReportMonths();
+  if(!reportMonth || !months.includes(reportMonth)) reportMonth = months[0] || '';
+  if(!reportMonth) return `<div class="panel"><h3>Monthly Reports</h3><div class="muted">No order data available yet.</div></div>`;
+  const [ry, rm] = reportMonth.split('-').map(Number);
+  const monthOrders = orders.filter(o=>{
+    const d = parseOrderDate(o.time);
+    return d && d.getFullYear()===ry && (d.getMonth()+1)===rm;
+  });
+  const counts = {};
+  STATUS_FLOW.forEach(s=>counts[s]=monthOrders.filter(o=>o.status===s).length);
+  const revenue = monthOrders.filter(o=>['paid','ready','delivered'].includes(o.status)).reduce((sum,o)=>sum+((o.price||0)*(o.qty||1)),0);
+  const monthLabel = new Date(ry, rm-1, 1).toLocaleString('en-US',{month:'long', year:'numeric'});
+
+  // Enquiry stats for the same selected month
+  const monthEnquiries = enquiries.filter(e=>{
+    const d = new Date(e.date);
+    return !isNaN(d) && d.getFullYear()===ry && (d.getMonth()+1)===rm;
+  });
+  const enqConverted = monthEnquiries.filter(e=>e.status==='converted').length;
+  const enqCancelled = monthEnquiries.filter(e=>e.status==='cancelled').length;
+  const enqLost = monthEnquiries.filter(e=>e.status==='lost').length;
+  const enqOpen = monthEnquiries.filter(e=>['new','following'].includes(e.status)).length;
+  const enqOverdue = monthEnquiries.filter(e=>['new','following'].includes(e.status) && isOverdue(e.nextFollowUpDue)).length;
+  const enqConvRate = monthEnquiries.length ? Math.round((enqConverted/monthEnquiries.length)*100) : 0;
+
+  return `
+  <div class="panel">
+    <h3>Monthly Reports</h3>
+    <div class="toolbar">
+      <select onchange="reportMonth=this.value; renderMain();">
+        ${months.map(m=>{
+          const [y,mm] = m.split('-').map(Number);
+          const label = new Date(y, mm-1, 1).toLocaleString('en-US',{month:'long', year:'numeric'});
+          return `<option value="${m}" ${m===reportMonth?'selected':''}>${label}</option>`;
+        }).join('')}
+      </select>
+      <button class="btn ghost small" onclick="downloadMonthlyCSV()">Download Orders CSV</button>
+      <button class="btn ghost small" onclick="downloadEnquiryCSV()">Download Enquiries CSV</button>
+    </div>
+    <div class="cards">
+      <div class="card gold"><div class="label">Orders — ${monthLabel}</div><div class="value">${monthOrders.length}</div></div>
+      <div class="card"><div class="label">Revenue (Paid+)</div><div class="value">GH₵${revenue.toFixed(0)}</div></div>
+      <div class="card"><div class="label">Delivered</div><div class="value">${counts.delivered||0}</div></div>
+    </div>
+    <table>
+      <tr><th>Status</th><th>Count</th></tr>
+      ${STATUS_FLOW.map(s=>`<tr><td>${cap(s)}</td><td>${counts[s]||0}</td></tr>`).join('')}
+    </table>
+  </div>
+
+  <div class="panel">
+    <h3>Enquiry Report — ${monthLabel}</h3>
+    <div class="cards">
+      <div class="card"><div class="label">Enquiries Logged</div><div class="value">${monthEnquiries.length}</div></div>
+      <div class="card"><div class="label">Converted</div><div class="value" style="color:var(--green)">${enqConverted}</div></div>
+      <div class="card"><div class="label">Conversion Rate</div><div class="value">${enqConvRate}%</div></div>
+      <div class="card ${enqOverdue?'gold':''}"><div class="label">Currently Overdue</div><div class="value">${enqOverdue}</div></div>
+    </div>
+    <table>
+      <tr><th>Status</th><th>Count</th></tr>
+      <tr><td>Still Open (New / Following)</td><td>${enqOpen}</td></tr>
+      <tr><td>Converted</td><td>${enqConverted}</td></tr>
+      <tr><td>Lost (declined)</td><td>${enqLost}</td></tr>
+      <tr><td>Auto-cancelled (no response after ${MAX_FOLLOWUPS} follow-ups)</td><td>${enqCancelled}</td></tr>
+    </table>
+  </div>
+  `;
+}
+
+function downloadEnquiryCSV(){
+  if(!reportMonth) return;
+  const [ry, rm] = reportMonth.split('-').map(Number);
+  const monthEnquiries = enquiries.filter(e=>{
+    const d = new Date(e.date);
+    return !isNaN(d) && d.getFullYear()===ry && (d.getMonth()+1)===rm;
+  });
+  const rows = [['Enquiry ID','Name','Phone','Channel','Logged Date','Status','Follow-up Attempts','Last Note']];
+  monthEnquiries.forEach(e=>{
+    const last = e.followUps && e.followUps.length ? e.followUps[e.followUps.length-1].note : '';
+    rows.push([e.id, e.name, e.phone, e.channel, e.date, e.status, (e.followUps?e.followUps.length:0), last]);
+  });
+  const csv = rows.map(r=>r.map(v=>`"${String(v).replace(/"/g,'""')}"`).join(',')).join('\n');
+  const blob = new Blob([csv], {type:'text/csv'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = `sash-afrique-enquiries-${reportMonth}.csv`;
+  document.body.appendChild(a); a.click(); document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+
+function downloadMonthlyCSV(){
+  if(!reportMonth) return;
+  const [ry, rm] = reportMonth.split('-').map(Number);
+  const monthOrders = orders.filter(o=>{
+    const d = parseOrderDate(o.time);
+    return d && d.getFullYear()===ry && (d.getMonth()+1)===rm;
+  });
+  const rows = [['Order No.','Time','Achiever','Status','Qty','Price']];
+  monthOrders.forEach(o=>rows.push([o.id,o.time,o.achiever,o.status,o.qty,o.price]));
+  const csv = rows.map(r=>r.map(v=>`"${String(v).replace(/"/g,'""')}"`).join(',')).join('\n');
+  const blob = new Blob([csv], {type:'text/csv'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = `sash-afrique-report-${reportMonth}.csv`;
+  document.body.appendChild(a); a.click(); document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+
+/* ---------------- COMPANY UPDATES ---------------- */
+const companyUpdates = [
+  { date:'25-07-2026', title:'New Pattern Gallery Live', body:'The full kente pattern gallery is now live at samples.sashafrique.com for achievers to browse before ordering.' },
+  { date:'15-07-2026', title:'Faster Turnaround, Our Edge', body:'Our standard turnaround is the fastest among comparable providers at similar prices — keep highlighting this to achievers.' },
+  { date:'01-07-2026', title:'Staff Ops Module Added', body:'Clock in/out and performance tracking is now live on this dashboard. Please clock in at the start of every shift.' }
+];
+
+function viewCompanyUpdates(){
+  return `
+  <div class="panel">
+    <h3>Company Updates</h3>
+    ${companyUpdates.map((u,i)=> i===0 ? `
+      <div class="announce-item-latest">
+        <div class="announce-badge"><span class="pulse-dot"></span>Latest</div>
+        <div class="flex-between"><strong style="font-size:14px;">${u.title}</strong><span class="muted" style="font-size:11px;">${u.date}</span></div>
+        <div class="muted" style="margin-top:4px;font-size:13px;">${u.body}</div>
+      </div>
+    ` : `
+      <div class="activity-item">
+        <div class="dot"></div>
+        <div style="flex:1;">
+          <div class="flex-between"><strong>${u.title}</strong><span class="muted" style="font-size:11px;">${u.date}</span></div>
+          <div class="muted" style="margin-top:3px;">${u.body}</div>
+        </div>
+      </div>
+    `).join('')}
+  </div>
+  `;
+}
+
+/* ---------------- REPORT AN IT ISSUE ---------------- */
+let itIssues = [];
+
+function viewITIssue(){
+  return `
+  <div class="panel">
+    <h3>Report an IT Issue</h3>
+    <div style="max-width:560px;">
+      <div class="field">
+        <label>Issue Title</label>
+        <input id="itTitle" placeholder="e.g. Can't upload design proof">
+      </div>
+      <div class="row2">
+        <div class="field">
+          <label>Category</label>
+          <select id="itCategory">
+            ${['App / Dashboard','Printer','Google Sheets Sync','SMS / Payments','Website / Order Form','Other'].map(c=>`<option>${c}</option>`).join('')}
+          </select>
+        </div>
+        <div class="field">
+          <label>Urgency</label>
+          <select id="itUrgency">
+            ${['Low','Medium','High'].map(u=>`<option ${u==='Medium'?'selected':''}>${u}</option>`).join('')}
+          </select>
+        </div>
+      </div>
+      <div class="field">
+        <label>What's happening?</label>
+        <textarea id="itDesc" rows="4" placeholder="Describe the issue, what you were doing, and any error message."></textarea>
+      </div>
+      <button class="btn" onclick="submitITIssue()">Submit Issue</button>
+    </div>
+  </div>
+  <div class="panel">
+    <h3>Your Reported Issues ${itIssues.length?`<span class="pill">${itIssues.length}</span>`:''}</h3>
+    ${itIssues.length ? itIssues.map(i=>`
+      <div class="activity-item">
+        <div class="dot"></div>
+        <div>
+          <div><strong>${i.title}</strong> <span class="pill">${i.category}</span> <span class="badge b-${i.urgency==='High'?'lost':i.urgency==='Medium'?'pending':'reviewed'}">${i.urgency}</span></div>
+          <div class="muted" style="margin-top:3px;">${i.description}</div>
+          <div class="muted" style="font-size:11px;margin-top:3px;">${i.t}</div>
+        </div>
+      </div>
+    `).join('') : `<div class="muted">No issues reported this session.</div>`}
+  </div>
+  `;
+}
+
+async function submitITIssue(){
+  const title = document.getElementById('itTitle').value.trim();
+  const category = document.getElementById('itCategory').value;
+  const urgency = document.getElementById('itUrgency').value;
+  const description = document.getElementById('itDesc').value.trim();
+  if(!title || !description){ showToast('Please add a title and description.'); return; }
+  const t = new Date().toLocaleString('en-US', {day:'2-digit', month:'2-digit', year:'numeric', hour:'numeric', minute:'2-digit'});
+  const issue = { title, category, urgency, description, t, staff: AGENT_NAME };
+  itIssues.unshift(issue);
+  if(ORDERS_ENDPOINT){
+    try{
+      await fetch(ORDERS_ENDPOINT, {
+        method:'POST',
+        headers:{'Content-Type':'text/plain;charset=utf-8'},
+        body: JSON.stringify(Object.assign({ action:'reportIssue' }, issue))
+      });
+    }catch(err){ console.warn('Could not reach backend to log IT issue:', err); }
+  }
+  showToast('IT issue submitted. Thank you!');
+  renderMain();
+}
+
 /* ---------------- NOTIFICATION BELL (unread achiever messages) ---------------- */
 function getUnreadThreads(){
   return orders.filter(o => o.chat && o.chat.length && o.chat[o.chat.length-1].from === 'achiever');
@@ -1194,41 +1972,47 @@ async function loadOrdersFromBackend(){
 }
 
 async function pushStatus(id, status){
-  if(!ORDERS_ENDPOINT) return;
+  if(!ORDERS_ENDPOINT) return false;
   try{
-    await fetch(ORDERS_ENDPOINT, {
+    const res = await fetch(ORDERS_ENDPOINT, {
       method: 'POST',
       headers: {'Content-Type': 'text/plain;charset=utf-8'},
       body: JSON.stringify({ action: 'updateStatus', id, status })
     });
+    return res.ok;
   }catch(err){
     console.warn('Could not reach orders backend:', err);
+    return false;
   }
 }
 
 async function pushFields(id, fields){
-  if(!ORDERS_ENDPOINT) return;
+  if(!ORDERS_ENDPOINT) return false;
   try{
-    await fetch(ORDERS_ENDPOINT, {
+    const res = await fetch(ORDERS_ENDPOINT, {
       method: 'POST',
       headers: {'Content-Type': 'text/plain;charset=utf-8'},
       body: JSON.stringify({ action: 'updateFields', id, fields })
     });
+    return res.ok;
   }catch(err){
     console.warn('Could not reach orders backend:', err);
+    return false;
   }
 }
 
 async function pushChatMessage(id, from, text){
-  if(!ORDERS_ENDPOINT) return;
+  if(!ORDERS_ENDPOINT) return false;
   try{
-    await fetch(ORDERS_ENDPOINT, {
+    const res = await fetch(ORDERS_ENDPOINT, {
       method: 'POST',
       headers: {'Content-Type': 'text/plain;charset=utf-8'},
       body: JSON.stringify({ action: 'sendMessage', id, from, text })
     });
+    return res.ok;
   }catch(err){
     console.warn('Could not reach orders backend:', err);
+    return false;
   }
 }
 
