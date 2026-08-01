@@ -169,6 +169,8 @@ document.addEventListener('DOMContentLoaded', () => {
   .chat-input-row input{flex:1;background:var(--panel2);border:1px solid var(--border);color:var(--text);padding:10px 12px;border-radius:8px;font-size:13px;}
   .customer-file{display:flex;align-items:center;justify-content:space-between;padding:8px 10px;background:var(--panel2);border:1px solid var(--border);border-radius:7px;margin-bottom:6px;font-size:12.5px;}
 </style>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 </head>
 <body>
 <div class="app">
@@ -1681,10 +1683,21 @@ function incrementCustomGoal(id){
 
 /* ---------------- MONTHLY REPORTS ---------------- */
 function parseOrderDate(timeStr){
-  const [datePart] = (timeStr||'').split(' ');
-  const [d,m,y] = (datePart||'').split('-').map(Number);
-  if(!d||!m||!y) return null;
-  return new Date(y, m-1, d);
+  if(!timeStr) return null;
+  // Case 1: our own format, "DD-MM-YYYY HH:MM"
+  const [datePart] = timeStr.split(' ');
+  const parts = (datePart||'').split('-').map(Number);
+  if(parts.length===3 && parts[0] && parts[1] && parts[2] && parts[0] <= 31 && parts[1] <= 12){
+    const [d,m,y] = parts;
+    const dt = new Date(y, m-1, d);
+    if(!isNaN(dt)) return dt;
+  }
+  // Case 2: ISO 8601 or any format the JS Date constructor understands
+  // (this is what Google Sheets/Apps Script often returns once a cell has been
+  // auto-converted to a real Date — e.g. "2026-07-25T19:16:00.000Z")
+  const iso = new Date(timeStr);
+  if(!isNaN(iso)) return iso;
+  return null;
 }
 
 let reportMonth = null; // 'YYYY-MM'
@@ -1724,6 +1737,18 @@ function viewMonthlyReports(){
   const enqOverdue = monthEnquiries.filter(e=>['new','following'].includes(e.status) && isOverdue(e.nextFollowUpDue)).length;
   const enqConvRate = monthEnquiries.length ? Math.round((enqConverted/monthEnquiries.length)*100) : 0;
 
+  // ---- Auto-generated Officer Briefing (modeled on finance.sashafrique.com's Finance Head Briefing) ----
+  const todayLabel = new Date().toLocaleDateString('en-GB',{day:'numeric',month:'long',year:'numeric'});
+  const briefingNarrative = `As of ${todayLabel}, ${monthLabel} has recorded ${monthOrders.length} order${monthOrders.length===1?'':'s'} logged, with ${counts.pending||0} still awaiting review and ${counts.delivered||0} delivered. Revenue recognized from paid, ready, and delivered orders stands at GH₵${revenue.toFixed(0)}. ${monthEnquiries.length} enquir${monthEnquiries.length===1?'y':'ies'} came in this month, converting at ${enqConvRate}%${enqOverdue ? `, with ${enqOverdue} currently overdue for follow-up` : ''}.`;
+
+  const briefingActions = [];
+  if((counts.pending||0) > 0) briefingActions.push(`${counts.pending} order${counts.pending===1?'':'s'} still need review — clear these first so achievers aren't left waiting.`);
+  if(enqOverdue > 0) briefingActions.push(`${enqOverdue} enquir${enqOverdue===1?'y is':'ies are'} overdue for follow-up — reach out today before they lapse toward auto-cancellation.`);
+  if(monthEnquiries.length >= 3 && enqConvRate < 30) briefingActions.push(`Conversion rate is at ${enqConvRate}% this month — worth a look at what's stalling enquiries before they're logged as lost or cancelled.`);
+  if(revenue === 0 && monthOrders.length > 0) briefingActions.push(`No revenue has been recognized yet this month despite ${monthOrders.length} order${monthOrders.length===1?'':'s'} logged — check whether payments are being marked correctly.`);
+  if((counts.ready||0) > 0) briefingActions.push(`${counts.ready} order${counts.ready===1?' is':'s are'} ready and waiting on pickup or delivery — confirm these are scheduled.`);
+  if(briefingActions.length === 0) briefingActions.push(`No urgent issues flagged for ${monthLabel} — keep up the pace.`);
+
   return `
   <div class="panel">
     <h3>Monthly Reports</h3>
@@ -1738,6 +1763,19 @@ function viewMonthlyReports(){
       <button class="btn ghost small" onclick="downloadMonthlyCSV()">Download Orders CSV</button>
       <button class="btn ghost small" onclick="downloadEnquiryCSV()">Download Enquiries CSV</button>
     </div>
+  </div>
+
+  <div class="panel" id="briefingCapture">
+    <h3>Officer Briefing <span class="muted" style="font-size:11px;font-weight:400;">Auto-generated from this month's recorded numbers</span></h3>
+    <p style="font-size:13.5px;line-height:1.6;color:var(--text);">${briefingNarrative}</p>
+    <h4 style="font-size:12.5px;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;margin:16px 0 8px;">Recommended Actions</h4>
+    <ul style="margin:0;padding-left:18px;font-size:13px;line-height:1.7;color:var(--text);">
+      ${briefingActions.map(a=>`<li>${a}</li>`).join('')}
+    </ul>
+  </div>
+  <button class="btn ghost small" style="margin-bottom:16px;" onclick="downloadBriefingPDF('${monthLabel}')">📄 Download Briefing (PDF)</button>
+
+  <div class="panel">
     <div class="cards">
       <div class="card gold"><div class="label">Orders — ${monthLabel}</div><div class="value">${monthOrders.length}</div></div>
       <div class="card"><div class="label">Revenue (Paid+)</div><div class="value">GH₵${revenue.toFixed(0)}</div></div>
@@ -1766,6 +1804,30 @@ function viewMonthlyReports(){
     </table>
   </div>
   `;
+}
+
+function downloadBriefingPDF(monthLabel){
+  const el = document.getElementById('briefingCapture');
+  if(!el || typeof html2canvas === 'undefined' || typeof window.jspdf === 'undefined'){
+    showToast('PDF export not available — check your connection and try again.', {warn:true});
+    return;
+  }
+  showToast('Generating PDF…');
+  html2canvas(el, {backgroundColor:'#141210', scale:2}).then(canvas => {
+    const { jsPDF } = window.jspdf;
+    const pdf = new jsPDF('p','mm','a4');
+    const pageWidth = pdf.internal.pageSize.getWidth();
+    const imgWidth = pageWidth - 20;
+    const imgHeight = canvas.height * imgWidth / canvas.width;
+    pdf.setFillColor(10,9,8);
+    pdf.rect(0,0,pageWidth,pdf.internal.pageSize.getHeight(),'F');
+    pdf.addImage(canvas.toDataURL('image/png'), 'PNG', 10, 10, imgWidth, imgHeight);
+    pdf.save(`sash-afrique-officer-briefing-${(monthLabel||'').replace(/\s+/g,'-')}.pdf`);
+    showToast('Briefing downloaded.');
+  }).catch(err => {
+    console.error('PDF export failed:', err);
+    showToast('Could not generate PDF — try again.', {warn:true});
+  });
 }
 
 function downloadEnquiryCSV(){
